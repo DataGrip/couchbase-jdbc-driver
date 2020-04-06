@@ -5,15 +5,20 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 public class DriverPropertyInfoHelper {
+  public static final String ENABLE_SSL = "sslenabled";
+  public static final String ENABLE_SSL_DEFAULT = "false";
   public static final String VERIFY_SERVER_CERTIFICATE = "verifyServerCertificate";
   public static final String VERIFY_SERVER_CERTIFICATE_DEFAULT = "true";
+  private static final String[] choices = new String[]{"true", "false"};
 
 
   public static DriverPropertyInfo[] getPropertyInfo() {
     ArrayList<DriverPropertyInfo> propInfos = new ArrayList<>();
 
+    addPropInfo(propInfos, ENABLE_SSL, ENABLE_SSL_DEFAULT, "Enable ssl.", choices);
+
     addPropInfo(propInfos, VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT,
-        "Configure a connection that uses SSL but does not verify the identity of the server.", null);
+        "Configure a connection that uses SSL but does not verify the identity of the server.", choices);
 
     return propInfos.toArray(new DriverPropertyInfo[0]);
   }

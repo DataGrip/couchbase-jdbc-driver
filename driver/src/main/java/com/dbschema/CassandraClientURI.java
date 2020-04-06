@@ -62,11 +62,11 @@ public class CassandraClientURI {
             }
         }
 
-        this.userName = getOption(info, options, "user");
-        this.password = getOption(info, options, "password");
-        String sslEnabledOption = getOption(info, options, "sslenabled");
+        this.userName = getOption(info, options, "user", null);
+        this.password = getOption(info, options, "password", null);
+        String sslEnabledOption = getOption(info, options, ENABLE_SSL, ENABLE_SSL_DEFAULT);
         this.sslEnabled = isTrue(sslEnabledOption);
-        String verifyServerCertOption = getOption(info, options, VERIFY_SERVER_CERTIFICATE);
+        String verifyServerCertOption = getOption(info, options, VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT);
         this.verifyServerCert = isTrue(verifyServerCertOption);
 
 
@@ -97,14 +97,15 @@ public class CassandraClientURI {
      * @return option from properties or from uri if it is not found in properties.
      * null if options was not found.
      */
-    private String getOption(Properties properties, Map<String, List<String>> options, String optionName) {
+    private String getOption(Properties properties, Map<String, List<String>> options, String optionName, String defaultValue) {
         if (properties != null) {
             String option = (String) properties.get(optionName);
             if (option != null) {
                 return option;
             }
         }
-        return getLastValue(options, optionName);
+        String value = getLastValue(options, optionName);
+        return value != null ? value : defaultValue;
     }
 
     Cluster createCluster() throws java.net.UnknownHostException, SSLParamsException {

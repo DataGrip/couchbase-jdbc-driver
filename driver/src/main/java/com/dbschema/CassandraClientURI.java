@@ -1,10 +1,19 @@
 package com.dbschema;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.RemoteEndpointAwareJdkSSLOptions;
+import com.datastax.driver.core.SSLOptions;
+import com.google.common.base.Strings;
 
 import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.KeyStore;
 import java.util.*;
 import java.util.logging.Logger;
+
+import static com.dbschema.DriverPropertyInfoHelper.*;
+import static com.dbschema.SSLUtil.getTrustEverybodySSLContext;
 
 public class CassandraClientURI {
 
@@ -16,12 +25,14 @@ public class CassandraClientURI {
     private final String keyspace;
     private final String collection;
     private final String uri;
+    private final Properties info;
     private final String userName;
     private final String password;
     private final Boolean sslEnabled;
 
     public CassandraClientURI(String uri, Properties info) {
         this.uri = uri;
+        this.info = info;
         if (!uri.startsWith(PREFIX))
             throw new IllegalArgumentException("URI needs to start with " + PREFIX);
 
@@ -95,19 +106,37 @@ public class CassandraClientURI {
         return getLastValue(options, optionName);
     }
 
-    Cluster createCluster() throws java.net.UnknownHostException {
+    Cluster createCluster() throws java.net.UnknownHostException, SSLParamsException {
         Cluster.Builder builder = Cluster.builder();
         int port = -1;
-        for ( String host : hosts ){
+        for (String host : hosts) {
             int idx = host.indexOf(":");
-            if ( idx > 0 ){
-                port = Integer.parseInt( host.substring( idx +1).trim() );
-                host = host.substring( 0, idx ).trim();
+            if (idx > 0) {
+                port = Integer.parseInt(host.substring(idx + 1).trim());
+                host = host.substring(0, idx).trim();
             }
-            builder.addContactPoints( InetAddress.getByName( host ) );
+            builder.addContactPoints(InetAddress.getByName(host));
             logger.info("sslenabled: " + sslEnabled.toString());
             if (sslEnabled) {
-                builder.withSSL();
+                boolean verifyServerCert = !isFalse(info.getProperty(VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT));
+                if (verifyServerCert) {
+                    builder.withSSL();
+                }
+                else {
+                    String keyStoreType = System.getProperty("javax.net.ssl.keyStoreType", KeyStore.getDefaultType());
+                    String keyStorePassword = System.getProperty("javax.net.ssl.keyStorePassword", "");
+                    String keyStoreUrl = System.getProperty("javax.net.ssl.keyStore", "");
+                    // check keyStoreUrl
+                    if (!Strings.isNullOrEmpty(keyStoreUrl)) {
+                        try {
+                            new URL(keyStoreUrl);
+                        } catch (MalformedURLException e) {
+                            keyStoreUrl = "file:" + keyStoreUrl;
+                        }
+                    }
+                    SSLOptions options = RemoteEndpointAwareJdkSSLOptions.builder().withSSLContext(getTrustEverybodySSLContext(keyStoreUrl, keyStoreType, keyStorePassword)).build();
+                    builder.withSSL(options);
+                }
             }
         }
         if ( port > -1 ){

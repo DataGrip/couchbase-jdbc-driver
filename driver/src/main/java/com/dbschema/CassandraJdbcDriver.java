@@ -19,6 +19,8 @@ import com.dbschema.codec.jstring.UuidCodec;
 import com.dbschema.codec.jstring.TimeuuidCodec;
 
 import java.net.UnknownHostException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -115,11 +117,11 @@ public class CassandraJdbcDriver implements Driver {
 
     @Override
     public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) {
-        return null;
+        return DriverPropertyInfoHelper.getPropertyInfo();
     }
 
     String getVersion() {
-        return "1.3.4";
+        return "1.3.5";
     }
 
     @Override

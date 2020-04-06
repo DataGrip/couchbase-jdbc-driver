@@ -28,7 +28,7 @@ public class DriverPropertyInfoHelper {
     propInfos.add(newProp);
   }
 
-  public static boolean isFalse(String value) {
-    return value == null || value.equals("0") || value.toLowerCase(Locale.ENGLISH).equals("false");
+  public static boolean isTrue(String value) {
+    return value != null && (value.equals("1") || value.toLowerCase(Locale.ENGLISH).equals("true"));
   }
 }

@@ -25,14 +25,13 @@ public class CassandraClientURI {
     private final String keyspace;
     private final String collection;
     private final String uri;
-    private final Properties info;
     private final String userName;
     private final String password;
-    private final Boolean sslEnabled;
+    private final boolean sslEnabled;
+    private final boolean verifyServerCert;
 
     public CassandraClientURI(String uri, Properties info) {
         this.uri = uri;
-        this.info = info;
         if (!uri.startsWith(PREFIX))
             throw new IllegalArgumentException("URI needs to start with " + PREFIX);
 
@@ -66,7 +65,9 @@ public class CassandraClientURI {
         this.userName = getOption(info, options, "user");
         this.password = getOption(info, options, "password");
         String sslEnabledOption = getOption(info, options, "sslenabled");
-        this.sslEnabled = Boolean.parseBoolean(sslEnabledOption);
+        this.sslEnabled = isTrue(sslEnabledOption);
+        String verifyServerCertOption = getOption(info, options, VERIFY_SERVER_CERTIFICATE);
+        this.verifyServerCert = isTrue(verifyServerCertOption);
 
 
         { // userName,password,hosts
@@ -116,9 +117,8 @@ public class CassandraClientURI {
                 host = host.substring(0, idx).trim();
             }
             builder.addContactPoints(InetAddress.getByName(host));
-            logger.info("sslenabled: " + sslEnabled.toString());
+            logger.info("sslenabled: " + sslEnabled);
             if (sslEnabled) {
-                boolean verifyServerCert = !isFalse(info.getProperty(VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT));
                 if (verifyServerCert) {
                     builder.withSSL();
                 }

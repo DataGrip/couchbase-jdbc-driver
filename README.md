@@ -25,4 +25,4 @@ Pass arguments for your keystore and trust store.
 -Djavax.net.ssl.keyStorePassword=password123
 ```
 
-To disable server certificate verification set driver property `verifyServerCertificate=false`.
+To disable server certificate verification set property `verifyServerCertificate=false`.

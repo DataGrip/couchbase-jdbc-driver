@@ -1,12 +1,27 @@
 package com.dbschema;
 
 
-import com.datastax.driver.core.Session;
-
-import java.sql.*;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.CallableStatement;
+import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.NClob;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLWarning;
+import java.sql.SQLXML;
+import java.sql.Savepoint;
+import java.sql.Statement;
+import java.sql.Struct;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Session;
 
 public class CassandraConnection implements Connection {
     /**
@@ -124,6 +139,13 @@ public class CassandraConnection implements Connection {
 
     @Override
     public void close() {
+        // Improved the physical connection to be closed.( https://github.com/DataGrip/cassandra-jdbc-driver/issues/4 )
+        if(!isClosed) {
+        	final Cluster _cluster = session.getCluster();
+        	session.close();
+        	_cluster.close();
+        }
+        
         isClosed = true;
     }
 

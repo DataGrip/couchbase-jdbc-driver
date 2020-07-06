@@ -1,5 +1,6 @@
 package com.dbschema;
 
+import com.couchbase.client.java.Cluster;
 
 import java.sql.Array;
 import java.sql.Blob;
@@ -20,47 +21,28 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+public class CouchbaseConnection implements Connection {
 
-public class CassandraConnection implements Connection {
-    /**
-     * This query retrieves Cassandra 2.x columns in DataGrip.
-     * <p>
-     * DataGrip before 2019.3 version assumes that index_name column does not contain null values.
-     * Driver since v1.3.2 version returns null value if a string is null (used to return "null")
-     * It means that DataGrip <2019.3 and driver v1.3.2 are incompatible.
-     * <p>
-     * To make driver and DG compatible driver will return "null" strings instead of null values
-     * for this particular query in PreparedStatement.
-     * See also https://youtrack.jetbrains.com/issue/DBE-9091
-     */
-    private static final String SELECT_COLUMNS_INTRO_QUERY = "SELECT column_name as name,\n       validator,\n       columnfamily_name as table_name,\n       type,\n       index_name,\n       index_options,\n       index_type,\n       component_index as position\nFROM system.schema_columns\nWHERE keyspace_name = ?";
-
-    private final Session session;
-    private CassandraJdbcDriver driver;
-    private boolean returnNullStringsFromIntroQuery;
+    private final Cluster cluster;
+    private final CouchbaseJdbcDriver driver;
+    private final boolean returnNullStringsFromIntroQuery;
     private boolean isClosed = false;
     private boolean isReadOnly = false;
 
-    CassandraConnection(Session session, CassandraJdbcDriver cassandraJdbcDriver, boolean returnNullStringsFromIntroQuery) {
-        this.session = session;
-        driver = cassandraJdbcDriver;
+    CouchbaseConnection(Cluster cluster, CouchbaseJdbcDriver couchbaseJdbcDriver,
+                        boolean returnNullStringsFromIntroQuery) {
+        this.cluster = cluster;
+        driver = couchbaseJdbcDriver;
         this.returnNullStringsFromIntroQuery = returnNullStringsFromIntroQuery;
     }
 
     public String getCatalog() throws SQLException {
         checkClosed();
-        try {
-            return session.getLoggedKeyspace();
-        } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
-        }
+        return null;
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public Session getSession() {
-        return session;
+    Cluster getCluster() {
+        return cluster;
     }
 
     @Override
@@ -79,7 +61,7 @@ public class CassandraConnection implements Connection {
     public Statement createStatement() throws SQLException {
         checkClosed();
         try {
-            return new CassandraStatement(session);
+            return new CouchbaseStatement(cluster);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -99,7 +81,7 @@ public class CassandraConnection implements Connection {
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         checkClosed();
         try {
-            return new CassandraPreparedStatement(session, session.prepare(sql), returnNullStringsFromIntroQuery || !SELECT_COLUMNS_INTRO_QUERY.equals(sql));
+            return new CouchbasePreparedStatement(cluster, sql, returnNullStringsFromIntroQuery);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -113,7 +95,7 @@ public class CassandraConnection implements Connection {
     @Override
     public String nativeSQL(String sql) throws SQLException {
         checkClosed();
-        throw new SQLFeatureNotSupportedException("Cassandra does not support SQL natively.");
+        throw new SQLFeatureNotSupportedException("Couchbase does not support SQL natively.");
     }
 
     @Override
@@ -139,13 +121,9 @@ public class CassandraConnection implements Connection {
 
     @Override
     public void close() {
-        // Improved the physical connection to be closed.( https://github.com/DataGrip/cassandra-jdbc-driver/issues/4 )
-        if(!isClosed) {
-        	final Cluster _cluster = session.getCluster();
-        	session.close();
-        	_cluster.close();
+        if (!isClosed) {
+            cluster.disconnect();
         }
-        
         isClosed = true;
     }
 
@@ -157,7 +135,7 @@ public class CassandraConnection implements Connection {
     @Override
     public DatabaseMetaData getMetaData() throws SQLException {
         checkClosed();
-        return new CassandraMetaData(this, driver);
+        return new CouchbaseMetaData(this, driver);
     }
 
     @Override
@@ -182,7 +160,7 @@ public class CassandraConnection implements Connection {
         checkClosed();
         // Since the only valid value for MongDB is Connection.TRANSACTION_NONE, and the javadoc for this method
         // indicates that this is not a valid value for level here, throw unsupported operation exception.
-        throw new UnsupportedOperationException("Cassandra provides no support for transactions.");
+        throw new UnsupportedOperationException("Couchbase provides no support for transactions.");
     }
 
     @Override
@@ -312,12 +290,10 @@ public class CassandraConnection implements Connection {
 
     @Override
     public void setClientInfo(String name, String value) {
-        /* Cassandra does not support setting client information in the database. */
     }
 
     @Override
     public void setClientInfo(Properties properties) {
-        /* Cassandra does not support setting client information in the database. */
     }
 
     @Override

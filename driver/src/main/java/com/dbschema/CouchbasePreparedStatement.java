@@ -1,31 +1,45 @@
 package com.dbschema;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.SyntaxError;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.json.JsonArray;
+import com.couchbase.client.java.query.QueryOptions;
 
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.sql.*;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.Clob;
+import java.sql.Date;
+import java.sql.NClob;
+import java.sql.ParameterMetaData;
+import java.sql.PreparedStatement;
+import java.sql.Ref;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.RowId;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLXML;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
 
 import static com.dbschema.DateUtil.Direction;
 import static com.dbschema.DateUtil.considerTimeZone;
 
-public class CassandraPreparedStatement extends CassandraBaseStatement implements PreparedStatement {
+public class CouchbasePreparedStatement extends CouchbaseBaseStatement implements PreparedStatement {
 
-    private final com.datastax.driver.core.PreparedStatement preparedStatement;
     private final boolean returnNullStrings;
+    private final String sql;
     private Object[] params;
 
-    CassandraPreparedStatement(Session session, final com.datastax.driver.core.PreparedStatement preparedStatement, boolean returnNullStrings) {
-        super(session);
-        this.preparedStatement = preparedStatement;
+    CouchbasePreparedStatement(Cluster cluster, String sql, boolean returnNullStrings) {
+        super(cluster);
         this.returnNullStrings = returnNullStrings;
+        this.sql = sql;
     }
 
     @Override
@@ -46,11 +60,20 @@ public class CassandraPreparedStatement extends CassandraBaseStatement implement
     @Override
     public void setObject(int parameterIndex, Object value) {
         if (params == null) {
-            int size = preparedStatement.getVariables().size();
-            params = new Object[size];
+            params = new Object[countPossibleParametersNumber(sql)];
         }
         int idx = parameterIndex - 1;
         params[idx] = value;
+    }
+
+    private static int countPossibleParametersNumber(String sql) {
+        int size = 0;
+        for (char character : sql.toCharArray()) {
+            if (character == '$') {
+                size++;
+            }
+        }
+        return size;
     }
 
     @Override
@@ -67,13 +90,8 @@ public class CassandraPreparedStatement extends CassandraBaseStatement implement
     public int executeUpdate() throws SQLException {
         checkClosed();
         try {
-            result = new CassandraResultSet(this, session.execute(bindParameters()), returnNullStrings);
-            if (result.isQuery()) {
-                throw new SQLException("Not an update statement");
-            }
+            result = new CouchbaseResultSet(this, cluster.query(sql, bindParameters()), returnNullStrings);
             return 1;
-        } catch (SyntaxError ex) {
-            throw new SQLSyntaxErrorException(ex.getMessage(), ex);
         } catch (Throwable t) {
             throw new SQLException(t.getLocalizedMessage(), t);
         }
@@ -244,15 +262,19 @@ public class CassandraPreparedStatement extends CassandraBaseStatement implement
     public boolean execute() throws SQLException {
         checkClosed();
         try {
-            return executeInner(session.execute(bindParameters()), returnNullStrings);
+            return executeInner(cluster.query(sql, bindParameters()), returnNullStrings);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
     }
 
-    private BoundStatement bindParameters() {
+    private QueryOptions bindParameters() {
         try {
-            return preparedStatement.bind(params == null ? new Object[]{} : params);
+            QueryOptions options = QueryOptions.queryOptions().adhoc(false);
+            if (params != null && params.length > 0) {
+                options = options.parameters(JsonArray.from(params));
+            }
+            return options;
         } finally {
             clearParams();
         }
@@ -265,16 +287,7 @@ public class CassandraPreparedStatement extends CassandraBaseStatement implement
 
     @Override
     public void addBatch() throws SQLException {
-        try {
-            if (batchStatement == null) {
-                batchStatement = new BatchStatement();
-            }
-            batchStatement.add(preparedStatement.bind(params == null ? new Object[]{} : params));
-        } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
-        } finally {
-            clearParameters();
-        }
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -440,5 +453,3 @@ public class CassandraPreparedStatement extends CassandraBaseStatement implement
         throw new SQLFeatureNotSupportedException();
     }
 }
-
-

@@ -1,22 +1,25 @@
 package com.dbschema;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.SyntaxError;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.query.QueryResult;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLWarning;
+import java.sql.Statement;
 
 /**
  * @author Liudmila Kornilova
  **/
-public abstract class CassandraBaseStatement implements Statement {
-    final com.datastax.driver.core.Session session;
-    BatchStatement batchStatement = null;
+public abstract class CouchbaseBaseStatement implements Statement {
+    final Cluster cluster;
     private boolean isClosed = false;
-    CassandraResultSet result;
+    CouchbaseResultSet result;
 
-    CassandraBaseStatement(Session session) {
-        this.session = session;
+    CouchbaseBaseStatement(Cluster cluster) {
+        this.cluster = cluster;
     }
 
     @Override
@@ -35,16 +38,10 @@ public abstract class CassandraBaseStatement implements Statement {
         return isClosed;
     }
 
-    boolean executeInner(com.datastax.driver.core.ResultSet resultSet, boolean returnNullStrings) throws SQLException {
+    boolean executeInner(QueryResult resultSet, boolean returnNullStrings) throws SQLException {
         try {
-            result = new CassandraResultSet(this, resultSet, returnNullStrings);
-            if (!result.isQuery()) {
-                result = null;
-                return false;
-            }
+            result = new CouchbaseResultSet(this, resultSet, returnNullStrings);
             return true;
-        } catch (SyntaxError ex) {
-            throw new SQLSyntaxErrorException(ex.getMessage(), ex);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -64,20 +61,7 @@ public abstract class CassandraBaseStatement implements Statement {
 
     @Override
     public int[] executeBatch() throws SQLException {
-        if (batchStatement == null) throw new SQLException("No batch statements were submitted");
-        int statementsCount = batchStatement.size();
-        try {
-            session.execute(batchStatement);
-        } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
-        } finally {
-            batchStatement = null;
-        }
-        int[] res = new int[statementsCount];
-        for (int i = 0; i < statementsCount; i++) {
-            res[i] = SUCCESS_NO_INFO;
-        }
-        return res;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -152,7 +136,7 @@ public abstract class CassandraBaseStatement implements Statement {
 
     @Override
     public void cancel() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Cassandra provides no support for interrupting an operation.");
+        throw new SQLFeatureNotSupportedException("Couchbase provides no support for interrupting an operation.");
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.dbschema;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -14,26 +15,26 @@ public class CassandraClientURITest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testUriForDifferentDb() {
-        new CassandraClientURI("jdbc:postgresql://localhost:54332/guest", null);
+        new CouchbaseClientURI("jdbc:postgresql://localhost:54332/guest", null);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testUriWithInvalidParameters() {
-        new CassandraClientURI("jdbc:cassandra://localhost:9042?name=cassandra", null);
+        new CouchbaseClientURI("jdbc:couchbase1:localhost:9042?name=cassandra", null);
     }
 
     @Test
     public void testSimpleUri() {
-        CassandraClientURI uri = new CassandraClientURI("jdbc:cassandra://localhost:9042", null);
-        List<String> hosts = uri.getHosts();
+        CouchbaseClientURI uri = new CouchbaseClientURI("jdbc:couchbase:localhost:9042", null);
+        List<String> hosts = Arrays.asList(uri.getHosts().split(","));
         assertEquals(1, hosts.size());
         assertEquals("localhost:9042", hosts.get(0));
     }
 
     @Test
     public void testUriWithUserName() {
-        CassandraClientURI uri = new CassandraClientURI("jdbc:cassandra://localhost:9042/?user=cassandra", null);
-        List<String> hosts = uri.getHosts();
+        CouchbaseClientURI uri = new CouchbaseClientURI("jdbc:couchbase:localhost:9042/?user=cassandra", null);
+        List<String> hosts = Arrays.asList(uri.getHosts().split(","));
         assertEquals(1, hosts.size());
         assertEquals("localhost:9042", hosts.get(0));
         assertEquals("cassandra", uri.getUsername());
@@ -44,10 +45,10 @@ public class CassandraClientURITest {
         Properties properties = new Properties();
         properties.put("user", "NameFromProperties");
         properties.put("password", "PasswordFromProperties");
-        CassandraClientURI uri = new CassandraClientURI(
-                "jdbc:cassandra://localhost:9042/?user=cassandra&password=cassandra",
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+                "jdbc:couchbase:localhost:9042/?user=cassandra&password=cassandra",
                 properties);
-        List<String> hosts = uri.getHosts();
+        List<String> hosts = Arrays.asList(uri.getHosts().split(","));
         assertEquals(1, hosts.size());
         assertEquals("localhost:9042", hosts.get(0));
         assertEquals("NameFromProperties", uri.getUsername());
@@ -59,8 +60,8 @@ public class CassandraClientURITest {
     public void testSslEnabledOptionTrue() {
         Properties properties = new Properties();
         properties.put("sslenabled", "true");
-        CassandraClientURI uri = new CassandraClientURI(
-                "jdbc:cassandra://localhost:9042/?name=cassandra&password=cassandra",
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+                "jdbc:couchbase:localhost:9042/?name=cassandra&password=cassandra",
                 properties);
         assertTrue(uri.getSslEnabled());
     }
@@ -69,8 +70,8 @@ public class CassandraClientURITest {
     public void testSslEnabledOptionFalse() {
         Properties properties = new Properties();
         properties.put("sslenabled", "false");
-        CassandraClientURI uri = new CassandraClientURI(
-                "jdbc:cassandra://localhost:9042/?name=cassandra&password=cassandra",
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+                "jdbc:couchbase:localhost:9042/?name=cassandra&password=cassandra",
                 properties);
         assertFalse(uri.getSslEnabled());
     }
@@ -78,8 +79,8 @@ public class CassandraClientURITest {
     @Test
     public void testNullSslEnabledOptionFalse() {
         Properties properties = new Properties();
-        CassandraClientURI uri = new CassandraClientURI(
-                "jdbc:cassandra://localhost:9042/?name=cassandra&password=cassandra",
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+                "jdbc:couchbase:localhost:9042/?name=cassandra&password=cassandra",
                 properties);
         assertFalse(uri.getSslEnabled());
     }

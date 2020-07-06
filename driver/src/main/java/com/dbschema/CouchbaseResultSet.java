@@ -1,43 +1,53 @@
 package com.dbschema;
 
-import com.datastax.driver.core.ColumnDefinitions.Definition;
-import com.datastax.driver.core.LocalDate;
-import com.datastax.driver.core.Row;
-import com.dbschema.CassandraResultSetMetaData.ColumnMetaData;
-import com.dbschema.types.ArrayImpl;
-import com.dbschema.types.BlobImpl;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryWarning;
 
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.nio.ByteBuffer;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Date;
-import java.sql.*;
+import java.sql.NClob;
+import java.sql.Ref;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.RowId;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLWarning;
+import java.sql.SQLXML;
+import java.sql.Statement;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.*;
 
-import static com.dbschema.DateUtil.Direction;
-import static com.dbschema.DateUtil.considerTimeZone;
+public class CouchbaseResultSet implements ResultSet {
 
-public class CassandraResultSet implements ResultSet {
+    private final static String RESULT_COLUMN_NAME = "result";
 
     private boolean isClosed = false;
-
     private final Statement statement;
-    private final com.datastax.driver.core.ResultSet dsResultSet;
-    private final Iterator<Row> iterator;
+    private final QueryResult queryResult;
     private final boolean returnNullStrings;
-    private Row currentRow;
+    private final Iterator<JsonObject> iterator;
+    private JsonObject currentRow;
+    private Map<String, Object> currentRowAsMap;
+    private CouchbaseResultSetMetaData meta;
 
-    CassandraResultSet(Statement statement, com.datastax.driver.core.ResultSet dsResultSet, boolean returnNullStrings) {
+    CouchbaseResultSet(Statement statement, QueryResult queryResult, boolean returnNullStrings) {
         this.statement = statement;
-        this.dsResultSet = dsResultSet;
-        this.iterator = dsResultSet.iterator();
+        this.queryResult = queryResult;
+        this.iterator = queryResult.rowsAsObject().iterator();
         this.returnNullStrings = returnNullStrings;
     }
 
-    CassandraResultSet(Statement statement, com.datastax.driver.core.ResultSet dsResultSet) {
-        this(statement, dsResultSet, true);
+    CouchbaseResultSet(Statement statement, QueryResult queryResult) {
+        this(statement, queryResult, true);
     }
 
     @Override
@@ -52,8 +62,11 @@ public class CassandraResultSet implements ResultSet {
 
     @Override
     public boolean next() {
+        currentRow = null;
+        currentRowAsMap = null;
         if (iterator.hasNext()) {
             currentRow = iterator.next();
+            currentRowAsMap = currentRow == null ? null : currentRow.toMap();
             return true;
         }
         return false;
@@ -64,10 +77,6 @@ public class CassandraResultSet implements ResultSet {
         isClosed = true;
     }
 
-    public boolean isQuery() {
-        return dsResultSet.getColumnDefinitions().size() != 0;
-    }
-
     @Override
     public boolean wasNull() {
         return false;
@@ -76,123 +85,103 @@ public class CassandraResultSet implements ResultSet {
     @Override
     public String getString(int columnIndex) throws SQLException {
         checkClosed();
+        checkColumnNumber(columnIndex);
         if (currentRow == null) throw new SQLException("Exhausted ResultSet.");
-        Object o = currentRow.getObject(columnIndex - 1);
-        return o == null ?
-                returnNullStrings ? null : "" :
-                String.valueOf(o);
+        String string = String.valueOf(currentRow);
+        return (string == null) ?
+                (returnNullStrings ? null : "") :
+                string;
+    }
+
+    @Override
+    public String getString(String columnLabel) throws SQLException {
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        if (currentRow == null) throw new SQLException("Exhausted ResultSet.");
+        String string = String.valueOf(currentRow);
+        return (string == null) ?
+                (returnNullStrings ? null : "") :
+                string;
+    }
+
+    @Override
+    public Object getObject(int columnIndex) throws SQLException {
+        checkClosed();
+        checkColumnNumber(columnIndex);
+        if (currentRowAsMap != null) {
+            return currentRowAsMap;
+        }
+        throw new SQLException("Result exhausted.");
+    }
+
+    @Override
+    public Object getObject(String columnLabel) throws SQLException {
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        if (currentRowAsMap != null) {
+            return currentRowAsMap;
+        }
+        throw new SQLException("Result exhausted.");
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getBool(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getByte(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getShort(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getInt(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getLong(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getFloat(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getDouble(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getDecimal(columnIndex - 1);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            final ByteBuffer bytes = currentRow.getBytes(columnIndex - 1);
-            return bytes != null ? bytes.array() : null;
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            final LocalDate date = currentRow.getDate(columnIndex - 1);
-            return date != null ? new Date(date.getMillisSinceEpoch()) : null;
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            long nanoseconds = currentRow.getTime(columnIndex - 1);
-            return new Time(nanoseconds / 1000000);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            final java.util.Date date = currentRow.getTimestamp(columnIndex - 1);
-            return date != null ? new Timestamp(date.getTime()) : null;
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -211,75 +200,38 @@ public class CassandraResultSet implements ResultSet {
     }
 
     @Override
-    public String getString(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getString(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
-    }
-
-    @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getBool(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getByte(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getShort(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getInt(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getLong(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getFloat(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getDouble(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -289,12 +241,7 @@ public class CassandraResultSet implements ResultSet {
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            ByteBuffer bytes = currentRow.getBytes(columnLabel);
-            return bytes == null ? null : bytes.array();
-        }
-        throw new SQLException("Result exhausted.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -329,10 +276,12 @@ public class CassandraResultSet implements ResultSet {
 
     @Override
     public SQLWarning getWarnings() {
-        // SUGGESTED BY CRISTI TO SHOW EXECUTION WARNINGS
         StringBuilder sb = new StringBuilder();
-        for (String warning : dsResultSet.getExecutionInfo().getWarnings()) {
-            sb.append(warning).append(" ");
+        for (QueryWarning warning : queryResult.metaData().warnings()) {
+            sb.append(warning.code())
+                    .append(": ")
+                    .append(warning.message())
+                    .append("\n");
         }
         return sb.length() > 0 ? new SQLWarning(sb.toString()) : null;
     }
@@ -350,36 +299,29 @@ public class CassandraResultSet implements ResultSet {
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         checkClosed();
-        List<ColumnMetaData> columnMetaData = new ArrayList<>();
-        for (Definition def : dsResultSet.getColumnDefinitions()) {
-            String typeName = def.getType().getName().name();
-            columnMetaData.add(new ColumnMetaData(def.getName(), def.getTable(), def.getKeyspace(), typeName));
-        }
-        return new CassandraResultSetMetaData(columnMetaData);
+        return getMetaDataInternal();
     }
 
-
-    @Override
-    public Object getObject(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getObject(columnIndex - 1);
+    private CouchbaseResultSetMetaData getMetaDataInternal() {
+        if (meta == null) {
+            meta = parseMetaData();
         }
-        throw new SQLException("Result exhausted.");
+        return meta;
     }
 
-    @Override
-    public Object getObject(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            return currentRow.getObject(columnLabel);
-        }
-        throw new SQLException("Result exhausted.");
+    private CouchbaseResultSetMetaData parseMetaData() {
+        List<CouchbaseResultSetMetaData.ColumnMetaData> metaData = new ArrayList<>();
+        metaData.add(new CouchbaseResultSetMetaData.ColumnMetaData(RESULT_COLUMN_NAME, "map"));
+        return new CouchbaseResultSetMetaData(metaData);
     }
 
     @Override
-    public int findColumn(String columnLabel) {
-        return dsResultSet.getColumnDefinitions().getIndexOf(columnLabel);
+    public int findColumn(String columnLabel) throws SQLException {
+        int index = getMetaDataInternal().findColumn(columnLabel);
+        if (index == -1) {
+            throw new SQLException("No such column " + columnLabel);
+        }
+        return index;
     }
 
     @Override
@@ -707,35 +649,15 @@ public class CassandraResultSet implements ResultSet {
     }
 
     public Blob getBlob(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            ByteBuffer bytes = currentRow.getBytes(columnIndex - 1);
-            return bytes == null ? null : new BlobImpl(bytes.array());
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLException("Clob type is not supported by Couchbase");
     }
 
     public Clob getClob(int columnIndex) throws SQLException {
-        throw new SQLException("Clob type is not supported by Cassandra");
+        throw new SQLException("Clob type is not supported by Couchbase");
     }
 
     public Array getArray(int columnIndex) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            Object o = currentRow.getObject(columnIndex - 1);
-            if (!(o instanceof List)) return null;
-            List list = (List) o;
-            return toArray(list);
-        }
-        throw new SQLException("Exhausted ResultSet.");
-    }
-
-    private Array toArray(List list) {
-        Object[] array = new Object[list.size()];
-        for (int i = 0; i < list.size(); i++) {
-            array[i] = list.get(i);
-        }
-        return new ArrayImpl(array);
+        throw new SQLFeatureNotSupportedException();
     }
 
     public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
@@ -747,39 +669,27 @@ public class CassandraResultSet implements ResultSet {
     }
 
     public Blob getBlob(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            ByteBuffer bytes = currentRow.getBytes(columnLabel);
-            return bytes == null ? null : new BlobImpl(bytes.array());
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLException("Blob type is not supported by Couchbase");
     }
 
     public Clob getClob(String columnLabel) throws SQLException {
-        throw new SQLException("Clob type is not supported by Cassandra");
+        throw new SQLException("Clob type is not supported by Couchbase");
     }
 
     public Array getArray(String columnLabel) throws SQLException {
-        checkClosed();
-        if (currentRow != null) {
-            Object o = currentRow.getObject(columnLabel);
-            if (!(o instanceof List)) return null;
-            List list = (List) o;
-            return toArray(list);
-        }
-        throw new SQLException("Exhausted ResultSet.");
+        throw new SQLFeatureNotSupportedException();
     }
 
     public Date getDate(int columnIndex, Calendar cal) throws SQLException {
-        return considerTimeZone(getDate(columnIndex), cal, Direction.FROM_UTC);
+        throw new SQLFeatureNotSupportedException();
     }
 
     public Time getTime(int columnIndex, Calendar cal) throws SQLException {
-        return considerTimeZone(getTime(columnIndex), cal, Direction.FROM_UTC);
+        throw new SQLFeatureNotSupportedException();
     }
 
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-        return DateUtil.considerTimeZone(getTimestamp(columnIndex), cal, Direction.FROM_UTC);
+        throw new SQLFeatureNotSupportedException();
     }
 
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
@@ -1029,6 +939,18 @@ public class CassandraResultSet implements ResultSet {
     private void checkClosed() throws SQLException {
         if (isClosed) {
             throw new SQLException("ResultSet was previously closed.");
+        }
+    }
+
+    private void checkColumnLabel(String columnLabel) throws SQLException {
+        if (!RESULT_COLUMN_NAME.equals(columnLabel)) {
+            throw new SQLException("No such column " + columnLabel);
+        }
+    }
+
+    private void checkColumnNumber(int columnNumber) throws SQLException {
+        if (columnNumber != 1) {
+            throw new SQLException("No such column");
         }
     }
 

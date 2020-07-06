@@ -1,36 +1,41 @@
 package com.dbschema;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.RemoteEndpointAwareJdkSSLOptions;
-import com.datastax.driver.core.SSLOptions;
-import com.google.common.base.Strings;
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CertificateAuthenticator;
+import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.nio.file.Paths;
 import java.security.KeyStore;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
 import java.util.logging.Logger;
 
-import static com.dbschema.DriverPropertyInfoHelper.*;
-import static com.dbschema.SSLUtil.getTrustEverybodySSLContext;
+import static com.dbschema.DriverPropertyInfoHelper.ENABLE_SSL;
+import static com.dbschema.DriverPropertyInfoHelper.ENABLE_SSL_DEFAULT;
+import static com.dbschema.DriverPropertyInfoHelper.isTrue;
 
-public class CassandraClientURI {
+public class CouchbaseClientURI {
 
-    private static final Logger logger = Logger.getLogger("CassandraClientURILogger");
+    private static final Logger logger = Logger.getLogger("CouchbaseClientURILogger");
 
-    static final String PREFIX = "jdbc:cassandra://";
+    static final String PREFIX = "jdbc:couchbase:";
 
-    private final List<String> hosts;
+    private final String hosts;
     private final String keyspace;
     private final String collection;
     private final String uri;
     private final String userName;
     private final String password;
     private final boolean sslEnabled;
-    private final boolean verifyServerCert;
 
-    public CassandraClientURI(String uri, Properties info) {
+    public CouchbaseClientURI(String uri, Properties info) {
         this.uri = uri;
         if (!uri.startsWith(PREFIX))
             throw new IllegalArgumentException("URI needs to start with " + PREFIX);
@@ -62,21 +67,11 @@ public class CassandraClientURI {
             }
         }
 
+        hosts = serverPart;
         this.userName = getOption(info, options, "user", null);
         this.password = getOption(info, options, "password", null);
         String sslEnabledOption = getOption(info, options, ENABLE_SSL, ENABLE_SSL_DEFAULT);
         this.sslEnabled = isTrue(sslEnabledOption);
-        String verifyServerCertOption = getOption(info, options, VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT);
-        this.verifyServerCert = isTrue(verifyServerCertOption);
-
-
-        { // userName,password,hosts
-            List<String> all = new LinkedList<>();
-
-            Collections.addAll(all, serverPart.split(","));
-
-            hosts = Collections.unmodifiableList(all);
-        }
 
         if (nsPart != null && nsPart.length() != 0) { // keyspace._collection
             int dotIndex = nsPart.indexOf(".");
@@ -108,49 +103,24 @@ public class CassandraClientURI {
         return value != null ? value : defaultValue;
     }
 
-    Cluster createCluster() throws java.net.UnknownHostException, SSLParamsException {
-        Cluster.Builder builder = Cluster.builder();
-        int port = -1;
-        for (String host : hosts) {
-            int idx = host.indexOf(":");
-            if (idx > 0) {
-                port = Integer.parseInt(host.substring(idx + 1).trim());
-                host = host.substring(0, idx).trim();
+    Cluster createCluster() {
+//        logger.info("sslenabled: " + sslEnabled);
+        Authenticator authenticator;
+        if (sslEnabled) {
+            String keyStoreType = System.getProperty("javax.net.ssl.keyStoreType", KeyStore.getDefaultType());
+            String keyStorePassword = System.getProperty("javax.net.ssl.keyStorePassword", "");
+            String keyStorePath = System.getProperty("javax.net.ssl.keyStore", "");
+            authenticator = CertificateAuthenticator.fromKeyStore(
+                    Paths.get(keyStorePath), keyStorePassword, Optional.of(keyStoreType));
+        } else {
+            if (userName == null || userName.isEmpty() || password == null) {
+                return null;
             }
-            builder.addContactPoints(InetAddress.getByName(host));
-            logger.info("sslenabled: " + sslEnabled);
-            if (sslEnabled) {
-                if (verifyServerCert) {
-                    builder.withSSL();
-                }
-                else {
-                    String keyStoreType = System.getProperty("javax.net.ssl.keyStoreType", KeyStore.getDefaultType());
-                    String keyStorePassword = System.getProperty("javax.net.ssl.keyStorePassword", "");
-                    String keyStoreUrl = System.getProperty("javax.net.ssl.keyStore", "");
-                    // check keyStoreUrl
-                    if (!Strings.isNullOrEmpty(keyStoreUrl)) {
-                        try {
-                            new URL(keyStoreUrl);
-                        } catch (MalformedURLException e) {
-                            keyStoreUrl = "file:" + keyStoreUrl;
-                        }
-                    }
-                    SSLOptions options = RemoteEndpointAwareJdkSSLOptions.builder().withSSLContext(getTrustEverybodySSLContext(keyStoreUrl, keyStoreType, keyStorePassword)).build();
-                    builder.withSSL(options);
-                }
-            }
-        }
-        if ( port > -1 ){
-            builder.withPort( port );
-
-        }
-        if (userName != null && !userName.isEmpty() && password != null) {
-            builder.withCredentials(userName, password);
             System.out.println("Using authentication as user '" + userName + "'");
+            authenticator = PasswordAuthenticator.create(userName, password);
         }
-        return builder.build();
+        return Cluster.connect(hosts, ClusterOptions.clusterOptions(authenticator));
     }
-
 
     private String getLastValue(final Map<String, List<String>> optionsMap, final String key) {
         if (optionsMap == null) return null;
@@ -214,7 +184,7 @@ public class CassandraClientURI {
      *
      * @return the host list
      */
-    public List<String> getHosts() {
+    public String getHosts() {
         return hosts;
     }
 
@@ -245,8 +215,6 @@ public class CassandraClientURI {
     public String getURI() {
         return uri;
     }
-
-
 
     @Override
     public String toString() {

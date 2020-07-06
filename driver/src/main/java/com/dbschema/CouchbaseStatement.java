@@ -1,30 +1,24 @@
 package com.dbschema;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.exceptions.SyntaxError;
+import com.couchbase.client.java.Cluster;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.sql.SQLSyntaxErrorException;
 
-public class CassandraStatement extends CassandraBaseStatement {
+public class CouchbaseStatement extends CouchbaseBaseStatement {
 
 
-    CassandraStatement(Session session) {
-        super(session);
+    CouchbaseStatement(Cluster cluster) {
+        super(cluster);
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         checkClosed();
         try {
-            result = new CassandraResultSet(this, session.execute(sql));
+            result = new CouchbaseResultSet(this, cluster.query(sql));
             return result;
-        } catch (SyntaxError ex) {
-            throw new SQLSyntaxErrorException(ex.getMessage(), ex);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -34,13 +28,8 @@ public class CassandraStatement extends CassandraBaseStatement {
     public int executeUpdate(String sql) throws SQLException {
         checkClosed();
         try {
-            result = new CassandraResultSet(this, session.execute(sql));
-            if (result.isQuery()) {
-                throw new SQLException("Not an update statement");
-            }
+            result = new CouchbaseResultSet(this, cluster.query(sql));
             return 1;
-        } catch (SyntaxError ex) {
-            throw new SQLSyntaxErrorException(ex.getMessage(), ex);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -50,7 +39,7 @@ public class CassandraStatement extends CassandraBaseStatement {
     public boolean execute(String sql) throws SQLException {
         checkClosed();
         try {
-            return executeInner(session.execute(sql), true);
+            return executeInner(cluster.query(sql), true);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -63,16 +52,13 @@ public class CassandraStatement extends CassandraBaseStatement {
     }
 
     @Override
-    public void addBatch(String sql) {
-        if (batchStatement == null) {
-            batchStatement = new BatchStatement();
-        }
-        batchStatement.add(new SimpleStatement(sql));
+    public void addBatch(String sql) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public void clearBatch() {
-        batchStatement = null;
+    public void clearBatch() throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

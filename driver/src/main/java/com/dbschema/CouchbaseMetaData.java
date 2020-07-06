@@ -1,17 +1,26 @@
 package com.dbschema;
 
-import java.sql.*;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryResult;
+
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.RowIdLifetime;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.List;
 
 /**
- * Cassandra databases are equivalent to catalogs for this driver. Schemas aren't used. Cassandra collections are
- * equivalent to tables, in that each collection is a table.
+ * Couchbase namespaces are equivalent to catalogs for this driver. Schemas aren't used. Couchbase buckets are
+ * equivalent to tables, in that each bucket is a table.
  */
-public class CassandraMetaData implements DatabaseMetaData {
+public class CouchbaseMetaData implements DatabaseMetaData {
 
-    private final CassandraConnection connection;
-    private CassandraJdbcDriver driver;
+    private final CouchbaseConnection connection;
+    private final CouchbaseJdbcDriver driver;
 
-    CassandraMetaData(CassandraConnection connection, CassandraJdbcDriver driver) {
+    CouchbaseMetaData(CouchbaseConnection connection, CouchbaseJdbcDriver driver) {
         this.connection = connection;
         this.driver = driver;
     }
@@ -94,16 +103,23 @@ public class CassandraMetaData implements DatabaseMetaData {
     }
 
     public String getDatabaseProductName() {
-        return "Cassandra";
+        return "Couchbase";
     }
 
-    public String getDatabaseProductVersion() {
-        com.datastax.driver.core.ResultSet result = connection.getSession().execute("select release_version from system.local");
-        return result.one().getString(0);
+    public String getDatabaseProductVersion() throws SQLException {
+        QueryResult resultSet = connection.getCluster().query("SELECT version();");
+        List<JsonObject> results = resultSet.rowsAsObject();
+        if (results.size() == 1) {
+            JsonObject jsonObject = results.get(0);
+            if (jsonObject.containsKey("$1")) {
+                return String.valueOf(jsonObject.get("$1"));
+            }
+        }
+        throw new SQLException("Unable to fetch database version");
     }
 
     public String getDriverName() {
-        return "Cassandra JDBC Driver";
+        return "Couchbase JDBC Driver";
     }
 
     public String getDriverVersion() {
@@ -298,8 +314,8 @@ public class CassandraMetaData implements DatabaseMetaData {
         throw new SQLFeatureNotSupportedException();
     }
 
-    public String getSchemaTerm() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public String getSchemaTerm() {
+        return "namespace";
     }
 
     public String getProcedureTerm() throws SQLException {
@@ -307,7 +323,7 @@ public class CassandraMetaData implements DatabaseMetaData {
     }
 
     public String getCatalogTerm() {
-        return "keyspace";
+        return "namespace";
     }
 
     public boolean isCatalogAtStart() throws SQLException {
@@ -315,7 +331,7 @@ public class CassandraMetaData implements DatabaseMetaData {
     }
 
     public String getCatalogSeparator() {
-        return ".";
+        return ":";
     }
 
     public boolean supportsSchemasInDataManipulation() throws SQLException {
@@ -506,9 +522,6 @@ public class CassandraMetaData implements DatabaseMetaData {
         return Connection.TRANSACTION_NONE;
     }
 
-    /**
-     * Cassandra doesn't support transactions, but document updates are atomic.
-     */
     public boolean supportsTransactions() {
         return false;
     }
@@ -646,7 +659,7 @@ public class CassandraMetaData implements DatabaseMetaData {
 
     @Override
     public boolean supportsBatchUpdates() {
-        return true;
+        return false;
     }
 
     @Override
@@ -706,12 +719,12 @@ public class CassandraMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public int getDatabaseMajorVersion() {
+    public int getDatabaseMajorVersion() throws SQLException {
         return Integer.parseInt((getDatabaseProductVersion().split("\\."))[0]);
     }
 
     @Override
-    public int getDatabaseMinorVersion() {
+    public int getDatabaseMinorVersion() throws SQLException {
         return Integer.parseInt((getDatabaseProductVersion().split("\\."))[1]);
     }
 

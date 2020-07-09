@@ -1,4 +1,4 @@
-package com.dbschema;
+package com.intellij;
 
 import org.junit.Test;
 

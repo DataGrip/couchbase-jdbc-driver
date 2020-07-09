@@ -1,4 +1,4 @@
-package com.dbschema;
+package com.intellij;
 
 import java.sql.DriverPropertyInfo;
 import java.util.ArrayList;

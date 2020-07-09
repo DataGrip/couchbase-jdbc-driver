@@ -1,4 +1,4 @@
-package com.dbschema;
+package com.intellij;
 
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CertificateAuthenticator;
@@ -17,9 +17,9 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import static com.dbschema.DriverPropertyInfoHelper.ENABLE_SSL;
-import static com.dbschema.DriverPropertyInfoHelper.ENABLE_SSL_DEFAULT;
-import static com.dbschema.DriverPropertyInfoHelper.isTrue;
+import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL;
+import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL_DEFAULT;
+import static com.intellij.DriverPropertyInfoHelper.isTrue;
 
 public class CouchbaseClientURI {
 

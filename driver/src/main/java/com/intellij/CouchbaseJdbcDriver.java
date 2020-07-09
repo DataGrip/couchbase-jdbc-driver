@@ -1,5 +1,4 @@
-
-package com.dbschema;
+package com.intellij;
 
 import com.couchbase.client.java.Cluster;
 
@@ -12,7 +11,7 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import static com.dbschema.CouchbaseClientURI.PREFIX;
+import static com.intellij.CouchbaseClientURI.PREFIX;
 
 
 /**

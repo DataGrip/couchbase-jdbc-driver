@@ -1,4 +1,4 @@
-package com.dbschema;
+package com.intellij;
 
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;

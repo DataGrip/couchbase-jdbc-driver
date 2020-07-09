@@ -1,4 +1,4 @@
-package com.dbschema;
+package com.intellij;
 
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonArray;
@@ -27,8 +27,8 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
 
-import static com.dbschema.DateUtil.Direction;
-import static com.dbschema.DateUtil.considerTimeZone;
+import static com.intellij.DateUtil.Direction;
+import static com.intellij.DateUtil.considerTimeZone;
 
 public class CouchbasePreparedStatement extends CouchbaseBaseStatement implements PreparedStatement {
 

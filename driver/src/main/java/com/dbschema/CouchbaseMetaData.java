@@ -1,7 +1,6 @@
 package com.dbschema;
 
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.QueryResult;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -107,8 +106,9 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public String getDatabaseProductVersion() throws SQLException {
-        QueryResult resultSet = connection.getCluster().query("SELECT version();");
-        List<JsonObject> results = resultSet.rowsAsObject();
+        List<JsonObject> results = connection.getCluster()
+                .query("SELECT version() FROM system:dual;")
+                .rowsAsObject();
         if (results.size() == 1) {
             JsonObject jsonObject = results.get(0);
             if (jsonObject.containsKey("$1")) {
@@ -175,7 +175,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public String getIdentifierQuoteString() {
-        return "\"";
+        return "`";
     }
 
     public String getSQLKeywords() {

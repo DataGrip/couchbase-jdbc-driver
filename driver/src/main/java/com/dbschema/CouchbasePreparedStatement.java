@@ -90,7 +90,9 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     public int executeUpdate() throws SQLException {
         checkClosed();
         try {
-            result = new CouchbaseResultSet(this, cluster.query(sql, bindParameters()), returnNullStrings);
+            result = new CouchbaseResultSet(this,
+                    cluster.reactive().query(sql, bindParameters()), returnNullStrings);
+            resultSets.add(result);
             return 1;
         } catch (Throwable t) {
             throw new SQLException(t.getLocalizedMessage(), t);
@@ -100,15 +102,6 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     @Override
     public int executeUpdate(String sql) throws SQLException {
         throw new SQLException("Method should not be called on prepared statement");
-    }
-
-    @Override
-    public void close() {
-        super.close();
-        if (result != null) {
-            result.close();
-            result = null;
-        }
     }
 
     @Override
@@ -262,7 +255,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     public boolean execute() throws SQLException {
         checkClosed();
         try {
-            return executeInner(cluster.query(sql, bindParameters()), returnNullStrings);
+            return executeInner(cluster.reactive().query(sql, bindParameters()), returnNullStrings);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }

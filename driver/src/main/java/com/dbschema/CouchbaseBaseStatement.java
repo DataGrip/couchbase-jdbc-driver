@@ -1,7 +1,9 @@
 package com.dbschema;
 
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.ReactiveCluster;
+import com.couchbase.client.java.query.ReactiveQueryResult;
+import reactor.core.publisher.Mono;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -9,21 +11,29 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * @author Liudmila Kornilova
  **/
 public abstract class CouchbaseBaseStatement implements Statement {
-    final Cluster cluster;
+    protected final Cluster cluster;
+    protected final ReactiveCluster reactiveCluster;
+    protected CouchbaseResultSet result;
+    protected Queue<CouchbaseResultSet> resultSets = new ConcurrentLinkedQueue<>();
     private boolean isClosed = false;
-    CouchbaseResultSet result;
 
     CouchbaseBaseStatement(Cluster cluster) {
         this.cluster = cluster;
+        this.reactiveCluster = cluster.reactive();
     }
 
     @Override
     public void close() {
+        resultSets.forEach(CouchbaseResultSet::close);
+        resultSets.clear();
+        result = null;
         isClosed = true;
     }
 
@@ -38,9 +48,10 @@ public abstract class CouchbaseBaseStatement implements Statement {
         return isClosed;
     }
 
-    boolean executeInner(QueryResult resultSet, boolean returnNullStrings) throws SQLException {
+    protected boolean executeInner(Mono<ReactiveQueryResult> resultSet, boolean returnNullStrings) throws SQLException {
         try {
             result = new CouchbaseResultSet(this, resultSet, returnNullStrings);
+            resultSets.add(result);
             return true;
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);

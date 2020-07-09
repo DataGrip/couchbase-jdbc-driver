@@ -1,6 +1,7 @@
 package com.dbschema;
 
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ReactiveCluster;
 
 import java.sql.Array;
 import java.sql.Blob;

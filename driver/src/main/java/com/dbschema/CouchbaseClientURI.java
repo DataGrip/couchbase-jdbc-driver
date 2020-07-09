@@ -104,7 +104,6 @@ public class CouchbaseClientURI {
     }
 
     Cluster createCluster() {
-//        logger.info("sslenabled: " + sslEnabled);
         Authenticator authenticator;
         if (sslEnabled) {
             String keyStoreType = System.getProperty("javax.net.ssl.keyStoreType", KeyStore.getDefaultType());

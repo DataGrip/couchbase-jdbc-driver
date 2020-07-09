@@ -1,8 +1,8 @@
 package com.dbschema;
 
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.QueryWarning;
+import com.couchbase.client.java.query.ReactiveQueryResult;
+import reactor.core.publisher.Mono;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -24,29 +24,39 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 public class CouchbaseResultSet implements ResultSet {
 
     private final static String RESULT_COLUMN_NAME = "result";
 
-    private boolean isClosed = false;
     private final Statement statement;
-    private final QueryResult queryResult;
     private final boolean returnNullStrings;
-    private final Iterator<JsonObject> iterator;
+    private final Stream<JsonObject> stream;
+    private Iterator<JsonObject> iterator;
     private JsonObject currentRow;
     private Map<String, Object> currentRowAsMap;
     private CouchbaseResultSetMetaData meta;
+    private boolean isClosed = false;
 
-    CouchbaseResultSet(Statement statement, QueryResult queryResult, boolean returnNullStrings) {
+    CouchbaseResultSet(Statement statement, Mono<ReactiveQueryResult> queryResult, boolean returnNullStrings) {
         this.statement = statement;
-        this.queryResult = queryResult;
-        this.iterator = queryResult.rowsAsObject().iterator();
+        this.stream = queryResult.flux()
+                .flatMap(ReactiveQueryResult::rowsAsObject)
+                .doOnRequest(x -> System.err.println("Requested next: " + x))
+                .doOnCancel(() -> System.err.println("Cancel this flux"))
+                .toStream();
+        this.iterator = stream.iterator();
         this.returnNullStrings = returnNullStrings;
     }
 
-    CouchbaseResultSet(Statement statement, QueryResult queryResult) {
+    CouchbaseResultSet(Statement statement, Mono<ReactiveQueryResult> queryResult) {
         this(statement, queryResult, true);
     }
 
@@ -61,7 +71,8 @@ public class CouchbaseResultSet implements ResultSet {
     }
 
     @Override
-    public boolean next() {
+    public boolean next() throws SQLException {
+        checkClosed();
         currentRow = null;
         currentRowAsMap = null;
         if (iterator.hasNext()) {
@@ -74,6 +85,11 @@ public class CouchbaseResultSet implements ResultSet {
 
     @Override
     public void close() {
+        System.out.println("Close called");
+        if (stream != null) {
+            stream.close();
+            iterator = Collections.emptyIterator();
+        }
         isClosed = true;
     }
 
@@ -275,15 +291,8 @@ public class CouchbaseResultSet implements ResultSet {
     }
 
     @Override
-    public SQLWarning getWarnings() {
-        StringBuilder sb = new StringBuilder();
-        for (QueryWarning warning : queryResult.metaData().warnings()) {
-            sb.append(warning.code())
-                    .append(": ")
-                    .append(warning.message())
-                    .append("\n");
-        }
-        return sb.length() > 0 ? new SQLWarning(sb.toString()) : null;
+    public SQLWarning getWarnings() throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -426,7 +435,7 @@ public class CouchbaseResultSet implements ResultSet {
 
     @Override
     public int getType() {
-        return ResultSet.TYPE_FORWARD_ONLY; // todo
+        return ResultSet.TYPE_FORWARD_ONLY;
     }
 
     @Override

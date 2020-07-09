@@ -7,8 +7,6 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
 public class CouchbaseStatement extends CouchbaseBaseStatement {
-
-
     CouchbaseStatement(Cluster cluster) {
         super(cluster);
     }
@@ -17,7 +15,8 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     public ResultSet executeQuery(String sql) throws SQLException {
         checkClosed();
         try {
-            result = new CouchbaseResultSet(this, cluster.query(sql));
+            result = new CouchbaseResultSet(this, cluster.reactive().query(sql));
+            resultSets.add(result);
             return result;
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
@@ -28,7 +27,8 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     public int executeUpdate(String sql) throws SQLException {
         checkClosed();
         try {
-            result = new CouchbaseResultSet(this, cluster.query(sql));
+            result = new CouchbaseResultSet(this, cluster.reactive().query(sql));
+            resultSets.add(result);
             return 1;
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
@@ -39,7 +39,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     public boolean execute(String sql) throws SQLException {
         checkClosed();
         try {
-            return executeInner(cluster.query(sql), true);
+            return executeInner(cluster.reactive().query(sql), true);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }

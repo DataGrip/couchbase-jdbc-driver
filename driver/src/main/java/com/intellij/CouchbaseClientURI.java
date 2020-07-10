@@ -8,6 +8,7 @@ import com.couchbase.client.java.ClusterOptions;
 
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,16 +16,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL;
 import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL_DEFAULT;
 import static com.intellij.DriverPropertyInfoHelper.isTrue;
 
-public class CouchbaseClientURI {
-
-    private static final Logger logger = Logger.getLogger("CouchbaseClientURILogger");
-
+class CouchbaseClientURI {
     static final String PREFIX = "jdbc:couchbase:";
 
     private final String hosts;
@@ -103,7 +100,7 @@ public class CouchbaseClientURI {
         return value != null ? value : defaultValue;
     }
 
-    Cluster createCluster() {
+    Cluster createCluster() throws SQLException {
         Authenticator authenticator;
         if (sslEnabled) {
             String keyStoreType = System.getProperty("javax.net.ssl.keyStoreType", KeyStore.getDefaultType());
@@ -113,9 +110,8 @@ public class CouchbaseClientURI {
                     Paths.get(keyStorePath), keyStorePassword, Optional.of(keyStoreType));
         } else {
             if (userName == null || userName.isEmpty() || password == null) {
-                return null;
+                throw new SQLException("Username or password is not provided");
             }
-            System.out.println("Using authentication as user '" + userName + "'");
             authenticator = PasswordAuthenticator.create(userName, password);
         }
         return Cluster.connect(hosts, ClusterOptions.clusterOptions(authenticator));

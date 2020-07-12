@@ -1,6 +1,7 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.Array;
 import java.sql.Blob;
@@ -22,18 +23,20 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 
 public class CouchbaseConnection implements Connection {
+    private static final String RETURN_NULL_STRINGS_FROM_INTRO_QUERY_KEY =
+            "couchbase.jdbc.return.null.strings.from.intro.query";
 
     private final Cluster cluster;
     private final CouchbaseJdbcDriver driver;
-    private final boolean returnNullStringsFromIntroQuery;
+    private final Properties properties;
     private boolean isClosed = false;
     private boolean isReadOnly = false;
 
-    CouchbaseConnection(Cluster cluster, CouchbaseJdbcDriver couchbaseJdbcDriver,
-                        boolean returnNullStringsFromIntroQuery) {
+    CouchbaseConnection(@NotNull Cluster cluster, @NotNull CouchbaseJdbcDriver couchbaseJdbcDriver,
+                        @NotNull Properties properties) {
         this.cluster = cluster;
-        driver = couchbaseJdbcDriver;
-        this.returnNullStringsFromIntroQuery = returnNullStringsFromIntroQuery;
+        this.driver = couchbaseJdbcDriver;
+        this.properties = properties;
     }
 
     public String getCatalog() throws SQLException {
@@ -43,6 +46,10 @@ public class CouchbaseConnection implements Connection {
 
     Cluster getCluster() {
         return cluster;
+    }
+
+    Properties getProperties() {
+        return properties;
     }
 
     @Override
@@ -81,6 +88,8 @@ public class CouchbaseConnection implements Connection {
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         checkClosed();
         try {
+            boolean returnNullStringsFromIntroQuery =
+                    Boolean.parseBoolean(properties.getProperty(RETURN_NULL_STRINGS_FROM_INTRO_QUERY_KEY));
             return new CouchbasePreparedStatement(cluster, sql, returnNullStringsFromIntroQuery);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);

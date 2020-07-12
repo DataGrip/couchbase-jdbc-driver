@@ -10,79 +10,58 @@ import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL;
 import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL_DEFAULT;
+import static com.intellij.DriverPropertyInfoHelper.PASSWORD;
+import static com.intellij.DriverPropertyInfoHelper.USER;
 import static com.intellij.DriverPropertyInfoHelper.isTrue;
 
 class CouchbaseClientURI {
     static final String PREFIX = "jdbc:couchbase:";
 
-    private final String hosts;
-    private final String keyspace;
-    private final String collection;
+    private static final Set<String> JDBC_KEYS = new HashSet<>(Arrays.asList(USER, PASSWORD, ENABLE_SSL));
+
+    private final String connectionString;
     private final String uri;
+    private final String hosts;
     private final String userName;
     private final String password;
     private final boolean sslEnabled;
 
     public CouchbaseClientURI(String uri, Properties info) {
         this.uri = uri;
-        if (!uri.startsWith(PREFIX))
+        if (!uri.startsWith(PREFIX)) {
             throw new IllegalArgumentException("URI needs to start with " + PREFIX);
+        }
 
-        uri = uri.substring(PREFIX.length());
-
-
-        String serverPart;
-        String nsPart;
+        String trimmedUri = uri.substring(PREFIX.length());
         Map<String, List<String>> options = null;
+        String serverPart;
 
-        {
-            int lastSlashIndex = uri.lastIndexOf("/");
-            if (lastSlashIndex < 0) {
-                if (uri.contains("?")) {
-                    throw new IllegalArgumentException("URI contains options without trailing slash");
-                }
-                serverPart = uri;
-                nsPart = null;
-            } else {
-                serverPart = uri.substring(0, lastSlashIndex);
-                nsPart = uri.substring(lastSlashIndex + 1);
-
-                int questionMarkIndex = nsPart.indexOf("?");
-                if (questionMarkIndex >= 0) {
-                    options = parseOptions(nsPart.substring(questionMarkIndex + 1));
-                    nsPart = nsPart.substring(0, questionMarkIndex);
-                }
-            }
-        }
-
-        hosts = serverPart;
-        this.userName = getOption(info, options, "user", null);
-        this.password = getOption(info, options, "password", null);
-        String sslEnabledOption = getOption(info, options, ENABLE_SSL, ENABLE_SSL_DEFAULT);
-        this.sslEnabled = isTrue(sslEnabledOption);
-
-        if (nsPart != null && nsPart.length() != 0) { // keyspace._collection
-            int dotIndex = nsPart.indexOf(".");
-            if (dotIndex < 0) {
-                keyspace = nsPart;
-                collection = null;
-            } else {
-                keyspace = nsPart.substring(0, dotIndex);
-                collection = nsPart.substring(dotIndex + 1);
-            }
+        int optionsStartIndex = trimmedUri.indexOf("?");
+        if (optionsStartIndex < 0) {
+            serverPart = trimmedUri;
         } else {
-            keyspace = null;
-            collection = null;
+            serverPart = trimmedUri.substring(0, optionsStartIndex);
+            options = parseOptions(trimmedUri.substring(optionsStartIndex + 1));
         }
+
+        this.userName = getOption(info, options, USER, null);
+        this.password = getOption(info, options, PASSWORD, null);
+        this.sslEnabled = isTrue(getOption(info, options, ENABLE_SSL, ENABLE_SSL_DEFAULT));
+        this.hosts = serverPart;
+        this.connectionString = createConnectionString(serverPart, options);
     }
 
     /**
@@ -114,7 +93,7 @@ class CouchbaseClientURI {
             }
             authenticator = PasswordAuthenticator.create(userName, password);
         }
-        return Cluster.connect(hosts, ClusterOptions.clusterOptions(authenticator));
+        return Cluster.connect(connectionString, ClusterOptions.clusterOptions(authenticator));
     }
 
     private String getLastValue(final Map<String, List<String>> optionsMap, final String key) {
@@ -127,7 +106,7 @@ class CouchbaseClientURI {
     private Map<String, List<String>> parseOptions(String optionsPart) {
         Map<String, List<String>> optionsMap = new HashMap<>();
 
-        for (String _part : optionsPart.split("[&;]")) {
+        for (String _part : optionsPart.split("&")) {
             int idx = _part.indexOf("=");
             if (idx >= 0) {
                 String key = _part.substring(0, idx).toLowerCase(Locale.ENGLISH);
@@ -144,6 +123,15 @@ class CouchbaseClientURI {
         return optionsMap;
     }
 
+    private String createConnectionString(String hosts, Map<String, List<String>> optionsMap) {
+        if (optionsMap == null) {
+            return hosts;
+        }
+        return optionsMap.keySet().stream()
+                .filter(key -> !JDBC_KEYS.contains(key))
+                .map(key -> key + "=" + getLastValue(optionsMap, key))
+                .collect(Collectors.joining("&", hosts + "?", ""));
+    }
 
     // ---------------------------------
 
@@ -175,31 +163,21 @@ class CouchbaseClientURI {
     }
 
     /**
+     * Gets the list of hosts and params sent directly to Java SDK
+     *
+     * @return the host list
+     */
+    public String getConnectionString() {
+        return connectionString;
+    }
+
+    /**
      * Gets the list of hosts
      *
      * @return the host list
      */
     public String getHosts() {
         return hosts;
-    }
-
-    /**
-     * Gets the keyspace name
-     *
-     * @return the keyspace name
-     */
-    public String getKeyspace() {
-        return keyspace;
-    }
-
-
-    /**
-     * Gets the collection name
-     *
-     * @return the collection name
-     */
-    public String getCollection() {
-        return collection;
     }
 
     /**

@@ -1,6 +1,8 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -18,7 +20,6 @@ import static com.intellij.CouchbaseClientURI.PREFIX;
  * Minimal implementation of the JDBC standards for the Couchbase database.
  */
 public class CouchbaseJdbcDriver implements Driver {
-    private static final String RETURN_NULL_STRINGS_FROM_INTRO_QUERY_KEY = "couchbase.jdbc.return.null.strings.from.intro.query";
 
     static {
         try {
@@ -29,19 +30,19 @@ public class CouchbaseJdbcDriver implements Driver {
     }
 
     /**
-     * todo: change this syntax to more suitable for Couchbase
      * Connect to the database using a URL like :
-     * jdbc:couchbase:host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[keyspace][?options]]
+     * jdbc:couchbase:host1[:port1][,host2[:port2],...][?option=value[&option=value&...]]
      * The URL's hosts and ports configuration is passed as it is to the Couchbase native Java driver.
      */
-    public Connection connect(String url, Properties info) throws SQLException {
-        if (url != null && acceptsURL(url)) {
-            CouchbaseClientURI clientURI = new CouchbaseClientURI(url, info);
+    public Connection connect(@NotNull String url, @Nullable Properties info) throws SQLException {
+        if (acceptsURL(url)) {
             try {
+                CouchbaseClientURI clientURI = new CouchbaseClientURI(url, info);
                 Cluster cluster = clientURI.createCluster();
-                boolean returnNullStringsFromIntroQuery =
-                        Boolean.parseBoolean(info.getProperty(RETURN_NULL_STRINGS_FROM_INTRO_QUERY_KEY));
-                return new CouchbaseConnection(cluster, this, returnNullStringsFromIntroQuery);
+                if (info == null) {
+                    info = new Properties();
+                }
+                return new CouchbaseConnection(cluster, this, info);
             } catch (Exception e) {
                 throw new SQLException(e.getMessage(), e);
             }
@@ -50,10 +51,11 @@ public class CouchbaseJdbcDriver implements Driver {
     }
 
     /**
-     * URLs accepted are of the form: jdbc:couchbase:host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[keyspace][?options]]
+     * URLs accepted are of the form:
+     * jdbc:couchbase:host1[:port1][,host2[:port2],...][?option=value[&option=value&...]]
      */
     @Override
-    public boolean acceptsURL(String url) {
+    public boolean acceptsURL(@NotNull String url) {
         return url.startsWith(PREFIX);
     }
 

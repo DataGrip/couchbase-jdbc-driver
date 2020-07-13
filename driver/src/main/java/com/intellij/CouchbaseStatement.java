@@ -1,13 +1,14 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
 public class CouchbaseStatement extends CouchbaseBaseStatement {
-    CouchbaseStatement(Cluster cluster) {
+    CouchbaseStatement(@NotNull Cluster cluster) {
         super(cluster);
     }
 
@@ -25,6 +26,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
+        //todo: learn to handle update queries
         checkClosed();
         try {
             result = new CouchbaseResultSet(this, cluster.reactive().query(sql));

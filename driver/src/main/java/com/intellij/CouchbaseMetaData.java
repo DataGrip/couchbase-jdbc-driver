@@ -1,6 +1,7 @@
 package com.intellij;
 
 import com.couchbase.client.java.json.JsonObject;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -19,7 +20,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     private final CouchbaseConnection connection;
     private final CouchbaseJdbcDriver driver;
 
-    CouchbaseMetaData(CouchbaseConnection connection, CouchbaseJdbcDriver driver) {
+    CouchbaseMetaData(@NotNull CouchbaseConnection connection, @NotNull CouchbaseJdbcDriver driver) {
         this.connection = connection;
         this.driver = driver;
     }

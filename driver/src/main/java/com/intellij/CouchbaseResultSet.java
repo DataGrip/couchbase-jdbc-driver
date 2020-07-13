@@ -2,6 +2,7 @@ package com.intellij;
 
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 
 import java.io.InputStream;
@@ -45,18 +46,17 @@ public class CouchbaseResultSet implements ResultSet {
     private CouchbaseResultSetMetaData meta;
     private boolean isClosed = false;
 
-    CouchbaseResultSet(Statement statement, Mono<ReactiveQueryResult> queryResult, boolean returnNullStrings) {
+    CouchbaseResultSet(@NotNull Statement statement, @NotNull Mono<ReactiveQueryResult> queryResult,
+                       boolean returnNullStrings) {
         this.statement = statement;
         this.stream = queryResult.flux()
                 .flatMap(ReactiveQueryResult::rowsAsObject)
-                .doOnRequest(x -> System.err.println("Requested next: " + x))
-                .doOnCancel(() -> System.err.println("Cancel this flux"))
                 .toStream();
         this.iterator = stream.iterator();
         this.returnNullStrings = returnNullStrings;
     }
 
-    CouchbaseResultSet(Statement statement, Mono<ReactiveQueryResult> queryResult) {
+    CouchbaseResultSet(@NotNull Statement statement, @NotNull Mono<ReactiveQueryResult> queryResult) {
         this(statement, queryResult, true);
     }
 
@@ -85,7 +85,6 @@ public class CouchbaseResultSet implements ResultSet {
 
     @Override
     public void close() {
-        System.out.println("Close called");
         if (stream != null) {
             stream.close();
             iterator = Collections.emptyIterator();
@@ -297,7 +296,6 @@ public class CouchbaseResultSet implements ResultSet {
 
     @Override
     public void clearWarnings() {
-        // todo
     }
 
     @Override
@@ -425,7 +423,6 @@ public class CouchbaseResultSet implements ResultSet {
 
     @Override
     public void setFetchSize(int rows) {
-        // todo
     }
 
     @Override

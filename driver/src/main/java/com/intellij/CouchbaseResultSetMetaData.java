@@ -1,5 +1,7 @@
 package com.intellij;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -18,7 +20,7 @@ public class CouchbaseResultSetMetaData implements ResultSetMetaData {
 
     private final List<ColumnMetaData> columnMetaData;
 
-    CouchbaseResultSetMetaData(List<ColumnMetaData> columnMetaData) {
+    CouchbaseResultSetMetaData(@NotNull List<ColumnMetaData> columnMetaData) {
         this.columnMetaData = columnMetaData;
     }
 

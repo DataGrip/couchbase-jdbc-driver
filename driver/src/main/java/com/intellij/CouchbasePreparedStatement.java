@@ -3,6 +3,7 @@ package com.intellij;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.query.QueryOptions;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -36,7 +37,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     private final String sql;
     private Object[] params;
 
-    CouchbasePreparedStatement(Cluster cluster, String sql, boolean returnNullStrings) {
+    CouchbasePreparedStatement(@NotNull Cluster cluster, @NotNull String sql, boolean returnNullStrings) {
         super(cluster);
         this.returnNullStrings = returnNullStrings;
         this.sql = sql;

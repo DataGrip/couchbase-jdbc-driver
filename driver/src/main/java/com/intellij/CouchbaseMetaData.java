@@ -59,47 +59,50 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        if (iface.isAssignableFrom(getClass())) {
+            return iface.cast(this);
+        }
+        throw new SQLException("Cannot unwrap to " + iface.getName());
     }
 
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean isWrapperFor(Class<?> iface) {
+        return iface.isAssignableFrom(getClass());
     }
 
-    public boolean allProceduresAreCallable() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean allProceduresAreCallable() {
+        return true;
     }
 
-    public boolean allTablesAreSelectable() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean allTablesAreSelectable() {
+        return true;
     }
 
     public String getURL() {
-        return null;
+        return connection.getUri().getURI();
     }
 
     public String getUserName() {
-        return null;
+        return connection.getUri().getUsername();
     }
 
     public boolean isReadOnly() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return connection.isReadOnly();
     }
 
-    public boolean nullsAreSortedHigh() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean nullsAreSortedHigh() {
+        return false;
     }
 
-    public boolean nullsAreSortedLow() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean nullsAreSortedLow() {
+        return true;
     }
 
-    public boolean nullsAreSortedAtStart() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean nullsAreSortedAtStart() {
+        return false;
     }
 
-    public boolean nullsAreSortedAtEnd() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean nullsAreSortedAtEnd() {
+        return false;
     }
 
     public String getDatabaseProductName() {
@@ -135,16 +138,16 @@ public class CouchbaseMetaData implements DatabaseMetaData {
         return driver.getMinorVersion();
     }
 
-    public boolean usesLocalFiles() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean usesLocalFiles() {
+        return false;
     }
 
-    public boolean usesLocalFilePerTable() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean usesLocalFilePerTable() {
+        return false;
     }
 
     public boolean supportsMixedCaseIdentifiers() {
-        return false;
+        return true;
     }
 
     public boolean storesUpperCaseIdentifiers() {
@@ -152,7 +155,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public boolean storesLowerCaseIdentifiers() {
-        return true;
+        return false;
     }
 
     public boolean storesMixedCaseIdentifiers() {
@@ -164,15 +167,15 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public boolean storesUpperCaseQuotedIdentifiers() {
-        return true;
+        return false;
     }
 
     public boolean storesLowerCaseQuotedIdentifiers() {
-        return true;
+        return false;
     }
 
     public boolean storesMixedCaseQuotedIdentifiers() {
-        return true;
+        return false;
     }
 
     public String getIdentifierQuoteString() {
@@ -207,316 +210,320 @@ public class CouchbaseMetaData implements DatabaseMetaData {
         return "";
     }
 
-    public boolean supportsAlterTableWithAddColumn() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsAlterTableWithAddColumn() {
+        return false;
     }
 
-    public boolean supportsAlterTableWithDropColumn() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsAlterTableWithDropColumn() {
+        return false;
     }
 
-    public boolean supportsColumnAliasing() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean nullPlusNonNullIsNull() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsConvert() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsConvert(int fromType, int toType) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsTableCorrelationNames() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsDifferentTableCorrelationNames() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsExpressionsInOrderBy() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsOrderByUnrelated() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsGroupBy() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsGroupByUnrelated() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsGroupByBeyondSelect() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsLikeEscapeClause() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsMultipleResultSets() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsMultipleTransactions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    public boolean supportsNonNullableColumns() {
+    public boolean supportsColumnAliasing() {
         return true;
     }
 
-    public boolean supportsMinimumSQLGrammar() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean nullPlusNonNullIsNull() {
+        return false;
     }
 
-    public boolean supportsCoreSQLGrammar() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsConvert() {
+        return false;
     }
 
-    public boolean supportsExtendedSQLGrammar() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsConvert(int fromType, int toType) {
+        return false;
     }
 
-    public boolean supportsANSI92EntryLevelSQL() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsTableCorrelationNames() {
+        return true;
     }
 
-    public boolean supportsANSI92IntermediateSQL() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsDifferentTableCorrelationNames() {
+        return true;
     }
 
-    public boolean supportsANSI92FullSQL() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsExpressionsInOrderBy() {
+        return true;
     }
 
-    public boolean supportsIntegrityEnhancementFacility() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsOrderByUnrelated() {
+        return false;
     }
 
-    public boolean supportsOuterJoins() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsGroupBy() {
+        return true;
     }
 
-    public boolean supportsFullOuterJoins() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsGroupByUnrelated() {
+        return true;
     }
 
-    public boolean supportsLimitedOuterJoins() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsGroupByBeyondSelect() {
+        return true;
+    }
+
+    public boolean supportsLikeEscapeClause() {
+        return false;
+    }
+
+    public boolean supportsMultipleResultSets() {
+        return false;
+    }
+
+    public boolean supportsMultipleTransactions() {
+        return false;
+    }
+
+    public boolean supportsNonNullableColumns() {
+        return false;
+    }
+
+    public boolean supportsMinimumSQLGrammar() {
+        return true;
+    }
+
+    public boolean supportsCoreSQLGrammar() {
+        return true;
+    }
+
+    public boolean supportsExtendedSQLGrammar() {
+        return false;
+    }
+
+    public boolean supportsANSI92EntryLevelSQL() {
+        return true;
+    }
+
+    public boolean supportsANSI92IntermediateSQL() {
+        return false;
+    }
+
+    public boolean supportsANSI92FullSQL() {
+        return false;
+    }
+
+    public boolean supportsIntegrityEnhancementFacility() {
+        return false;
+    }
+
+    public boolean supportsOuterJoins() {
+        return true;
+    }
+
+    public boolean supportsFullOuterJoins() {
+        return false;
+    }
+
+    public boolean supportsLimitedOuterJoins() {
+        return false;
     }
 
     public String getSchemaTerm() {
         return "namespace";
     }
 
-    public String getProcedureTerm() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public String getProcedureTerm() {
+        return "procedure";
     }
 
     public String getCatalogTerm() {
         return "namespace";
     }
 
-    public boolean isCatalogAtStart() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean isCatalogAtStart() {
+        return true;
     }
 
     public String getCatalogSeparator() {
         return ":";
     }
 
-    public boolean supportsSchemasInDataManipulation() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSchemasInDataManipulation() {
+        return true;
     }
 
-    public boolean supportsSchemasInProcedureCalls() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSchemasInProcedureCalls() {
+        return false;
     }
 
-    public boolean supportsSchemasInTableDefinitions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSchemasInTableDefinitions() {
+        return false;
     }
 
-    public boolean supportsSchemasInIndexDefinitions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSchemasInIndexDefinitions() {
+        return true;
     }
 
-    public boolean supportsSchemasInPrivilegeDefinitions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSchemasInPrivilegeDefinitions() {
+        //todo
+        return false;
     }
 
     public boolean supportsCatalogsInDataManipulation() {
         return true;
     }
 
-    public boolean supportsCatalogsInProcedureCalls() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsCatalogsInProcedureCalls() {
+        return false;
     }
 
-    public boolean supportsCatalogsInTableDefinitions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsCatalogsInTableDefinitions() {
+        return false;
     }
 
-    public boolean supportsCatalogsInIndexDefinitions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsCatalogsInIndexDefinitions() {
+        return true;
     }
 
-    public boolean supportsCatalogsInPrivilegeDefinitions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsCatalogsInPrivilegeDefinitions() {
+        //todo
+        return false;
     }
 
-    public boolean supportsPositionedDelete() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsPositionedDelete() {
+        return false;
     }
 
-    public boolean supportsPositionedUpdate() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsPositionedUpdate() {
+        return false;
     }
 
-    public boolean supportsSelectForUpdate() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSelectForUpdate() {
+        return false;
     }
 
-    public boolean supportsStoredProcedures() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsStoredProcedures() {
+        return false;
     }
 
-    public boolean supportsSubqueriesInComparisons() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSubqueriesInComparisons() {
+        return true;
     }
 
-    public boolean supportsSubqueriesInExists() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSubqueriesInExists() {
+        return true;
     }
 
-    public boolean supportsSubqueriesInIns() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSubqueriesInIns() {
+        return true;
     }
 
-    public boolean supportsSubqueriesInQuantifieds() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsSubqueriesInQuantifieds() {
+        return true;
     }
 
-    public boolean supportsCorrelatedSubqueries() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsCorrelatedSubqueries() {
+        return false;
     }
 
-    public boolean supportsUnion() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsUnion() {
+        return true;
     }
 
-    public boolean supportsUnionAll() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsUnionAll() {
+        return true;
     }
 
-    public boolean supportsOpenCursorsAcrossCommit() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsOpenCursorsAcrossCommit() {
+        return false;
     }
 
-    public boolean supportsOpenCursorsAcrossRollback() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsOpenCursorsAcrossRollback() {
+        return false;
     }
 
-    public boolean supportsOpenStatementsAcrossCommit() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsOpenStatementsAcrossCommit() {
+        //todo
+        return false;
     }
 
-    public boolean supportsOpenStatementsAcrossRollback() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsOpenStatementsAcrossRollback() {
+        //todo
+        return false;
     }
 
-    public int getMaxBinaryLiteralLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxBinaryLiteralLength() {
+        return 0;
     }
 
-    public int getMaxCharLiteralLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxCharLiteralLength() {
+        return 0;
     }
 
-    public int getMaxColumnNameLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxColumnNameLength() {
+        return 0;
     }
 
-    public int getMaxColumnsInGroupBy() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxColumnsInGroupBy() {
+        return 0;
     }
 
-    public int getMaxColumnsInIndex() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxColumnsInIndex() {
+        return 0;
     }
 
-    public int getMaxColumnsInOrderBy() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxColumnsInOrderBy() {
+        return 0;
     }
 
-    public int getMaxColumnsInSelect() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxColumnsInSelect() {
+        return 0;
     }
 
-    public int getMaxColumnsInTable() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxColumnsInTable() {
+        return 0;
     }
 
-    public int getMaxConnections() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxConnections() {
+        return 0;
     }
 
-    public int getMaxCursorNameLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxCursorNameLength() {
+        return 0;
     }
 
-    public int getMaxIndexLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxIndexLength() {
+        return 0;
     }
 
-    public int getMaxSchemaNameLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxSchemaNameLength() {
+        return 0;
     }
 
-    public int getMaxProcedureNameLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxProcedureNameLength() {
+        return 0;
     }
 
-    public int getMaxCatalogNameLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxCatalogNameLength() {
+        return 0;
     }
 
-    public int getMaxRowSize() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxRowSize() {
+        return 0;
     }
 
-    public boolean doesMaxRowSizeIncludeBlobs() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean doesMaxRowSizeIncludeBlobs() {
+        return true;
     }
 
-    public int getMaxStatementLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxStatementLength() {
+        return 0;
     }
 
-    public int getMaxStatements() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxStatements() {
+        return 0;
     }
 
-    public int getMaxTableNameLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxTableNameLength() {
+        return 0;
     }
 
     public int getMaxTablesInSelect() {
-        return 1;
+        return 0;
     }
 
-    public int getMaxUserNameLength() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getMaxUserNameLength() {
+        return 0;
     }
 
     public int getDefaultTransactionIsolation() {
@@ -524,27 +531,28 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public boolean supportsTransactions() {
+        //todo
         return false;
     }
 
-    public boolean supportsTransactionIsolationLevel(int level) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsTransactionIsolationLevel(int level) {
+        return Connection.TRANSACTION_NONE == level;
     }
 
-    public boolean supportsDataDefinitionAndDataManipulationTransactions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsDataDefinitionAndDataManipulationTransactions() {
+        return false;
     }
 
-    public boolean supportsDataManipulationTransactionsOnly() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsDataManipulationTransactionsOnly() {
+        return false;
     }
 
-    public boolean dataDefinitionCausesTransactionCommit() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean dataDefinitionCausesTransactionCommit() {
+        return false;
     }
 
-    public boolean dataDefinitionIgnoredInTransactions() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean dataDefinitionIgnoredInTransactions() {
+        return false;
     }
 
     public ResultSet getProcedures(String catalogName, String schemaPattern,
@@ -609,57 +617,58 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public boolean supportsResultSetConcurrency(int type, int concurrency) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsResultSetConcurrency(int type, int concurrency) {
+        return false;
     }
 
     @Override
-    public boolean ownUpdatesAreVisible(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean ownUpdatesAreVisible(int type) {
+        return false;
     }
 
     @Override
-    public boolean ownDeletesAreVisible(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean ownDeletesAreVisible(int type) {
+        return false;
     }
 
     @Override
-    public boolean ownInsertsAreVisible(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean ownInsertsAreVisible(int type) {
+        return false;
     }
 
     @Override
-    public boolean othersUpdatesAreVisible(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean othersUpdatesAreVisible(int type) {
+        return false;
     }
 
     @Override
-    public boolean othersDeletesAreVisible(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean othersDeletesAreVisible(int type) {
+        return false;
     }
 
     @Override
-    public boolean othersInsertsAreVisible(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean othersInsertsAreVisible(int type) {
+        return false;
     }
 
     @Override
-    public boolean updatesAreDetected(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean updatesAreDetected(int type) {
+        return false;
     }
 
     @Override
-    public boolean deletesAreDetected(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean deletesAreDetected(int type) {
+        return false;
     }
 
     @Override
-    public boolean insertsAreDetected(int type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean insertsAreDetected(int type) {
+        return false;
     }
 
     @Override
     public boolean supportsBatchUpdates() {
+        //todo
         return false;
     }
 
@@ -679,18 +688,19 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public boolean supportsNamedParameters() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsNamedParameters() {
+        //todo
+        return false;
     }
 
     @Override
-    public boolean supportsMultipleOpenResults() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsMultipleOpenResults() {
+        return true;
     }
 
     @Override
-    public boolean supportsGetGeneratedKeys() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsGetGeneratedKeys() {
+        return false;
     }
 
     @Override
@@ -710,13 +720,13 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public boolean supportsResultSetHoldability(int holdability) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsResultSetHoldability(int holdability) {
+        return false;
     }
 
     @Override
-    public int getResultSetHoldability() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getResultSetHoldability() {
+        return ResultSet.HOLD_CURSORS_OVER_COMMIT;
     }
 
     @Override
@@ -745,18 +755,18 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public boolean locatorsUpdateCopy() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean locatorsUpdateCopy() {
+        return false;
     }
 
     @Override
-    public boolean supportsStatementPooling() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsStatementPooling() {
+        return false;
     }
 
     @Override
-    public RowIdLifetime getRowIdLifetime() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public RowIdLifetime getRowIdLifetime() {
+        return RowIdLifetime.ROWID_UNSUPPORTED;
     }
 
     @Override
@@ -765,13 +775,13 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public boolean supportsStoredFunctionsUsingCallSyntax() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean supportsStoredFunctionsUsingCallSyntax() {
+        return false;
     }
 
     @Override
-    public boolean autoCommitFailureClosesAllResultSets() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean autoCommitFailureClosesAllResultSets() {
+        return false;
     }
 
     @Override
@@ -791,12 +801,13 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getPseudoColumns(String catalogName, String schemaPattern, String tableNamePattern, String columnNamePattern) {
+    public ResultSet getPseudoColumns(String catalogName, String schemaPattern, String tableNamePattern,
+                                      String columnNamePattern) {
         return null;
     }
 
     @Override
-    public boolean generatedKeyAlwaysReturned() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public boolean generatedKeyAlwaysReturned() {
+        return false;
     }
 }

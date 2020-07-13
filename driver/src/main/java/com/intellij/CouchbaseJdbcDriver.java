@@ -42,7 +42,7 @@ public class CouchbaseJdbcDriver implements Driver {
                 if (info == null) {
                     info = new Properties();
                 }
-                return new CouchbaseConnection(cluster, this, info);
+                return new CouchbaseConnection(cluster, this, clientURI, info);
             } catch (Exception e) {
                 throw new SQLException(e.getMessage(), e);
             }

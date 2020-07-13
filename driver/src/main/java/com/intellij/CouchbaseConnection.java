@@ -28,14 +28,16 @@ public class CouchbaseConnection implements Connection {
 
     private final Cluster cluster;
     private final CouchbaseJdbcDriver driver;
+    private final CouchbaseClientURI uri;
     private final Properties properties;
     private boolean isClosed = false;
     private boolean isReadOnly = false;
 
     CouchbaseConnection(@NotNull Cluster cluster, @NotNull CouchbaseJdbcDriver couchbaseJdbcDriver,
-                        @NotNull Properties properties) {
+                        @NotNull CouchbaseClientURI uri, @NotNull Properties properties) {
         this.cluster = cluster;
         this.driver = couchbaseJdbcDriver;
+        this.uri = uri;
         this.properties = properties;
     }
 
@@ -48,8 +50,8 @@ public class CouchbaseConnection implements Connection {
         return cluster;
     }
 
-    Properties getProperties() {
-        return properties;
+    CouchbaseClientURI getUri() {
+        return uri;
     }
 
     @Override
@@ -80,7 +82,8 @@ public class CouchbaseConnection implements Connection {
     }
 
     @Override
-    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+            throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
@@ -361,6 +364,4 @@ public class CouchbaseConnection implements Connection {
     public int getNetworkTimeout() throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
-
-
 }

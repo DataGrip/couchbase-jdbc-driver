@@ -1,4 +1,4 @@
-package com.intellij;
+package com.intellij.resultset;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -20,7 +20,7 @@ public class CouchbaseResultSetMetaData implements ResultSetMetaData {
 
     private final List<ColumnMetaData> columnMetaData;
 
-    CouchbaseResultSetMetaData(@NotNull List<ColumnMetaData> columnMetaData) {
+    public CouchbaseResultSetMetaData(@NotNull List<ColumnMetaData> columnMetaData) {
         this.columnMetaData = columnMetaData;
     }
 
@@ -148,7 +148,7 @@ public class CouchbaseResultSetMetaData implements ResultSetMetaData {
         return columnMetaData.get(column - 1).getClassName();
     }
 
-    static class ColumnMetaData {
+    public static class ColumnMetaData {
         private static final Map<String, Integer> javaTypeMap = new HashMap<>();
         private static final Map<String, String> typeNameMap = new HashMap<>();
 

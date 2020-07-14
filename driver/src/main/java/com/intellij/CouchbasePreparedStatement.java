@@ -3,6 +3,7 @@ package com.intellij;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.query.QueryOptions;
+import com.intellij.resultset.CouchbaseReactiveResultSet;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
@@ -91,7 +92,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     public int executeUpdate() throws SQLException {
         checkClosed();
         try {
-            result = new CouchbaseResultSet(this,
+            result = new CouchbaseReactiveResultSet(this,
                     cluster.reactive().query(sql, bindParameters()), returnNullStrings);
             resultSets.add(result);
             return 1;

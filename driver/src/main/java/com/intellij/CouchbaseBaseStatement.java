@@ -3,7 +3,9 @@ package com.intellij;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.intellij.resultset.CouchbaseReactiveResultSet;
 import reactor.core.publisher.Mono;
+import reactor.util.concurrent.Queues;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -20,8 +22,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public abstract class CouchbaseBaseStatement implements Statement {
     protected final Cluster cluster;
     protected final ReactiveCluster reactiveCluster;
-    protected CouchbaseResultSet result;
-    protected Queue<CouchbaseResultSet> resultSets = new ConcurrentLinkedQueue<>();
+    protected CouchbaseReactiveResultSet result;
+    protected Queue<CouchbaseReactiveResultSet> resultSets = new ConcurrentLinkedQueue<>();
+    private int fetchSize = Queues.SMALL_BUFFER_SIZE;
     private boolean isClosed = false;
 
     CouchbaseBaseStatement(Cluster cluster) {
@@ -31,7 +34,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
 
     @Override
     public void close() {
-        resultSets.forEach(CouchbaseResultSet::close);
+        resultSets.forEach(CouchbaseReactiveResultSet::close);
         resultSets.clear();
         result = null;
         isClosed = true;
@@ -50,7 +53,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
 
     protected boolean executeInner(Mono<ReactiveQueryResult> resultSet, boolean returnNullStrings) throws SQLException {
         try {
-            result = new CouchbaseResultSet(this, resultSet, returnNullStrings);
+            result = new CouchbaseReactiveResultSet(this, resultSet, returnNullStrings);
             resultSets.add(result);
             return true;
         } catch (Throwable t) {
@@ -178,12 +181,12 @@ public abstract class CouchbaseBaseStatement implements Statement {
 
     @Override
     public void setFetchSize(int rows) {
-        // todo
+        this.fetchSize = rows;
     }
 
     @Override
-    public int getFetchSize() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public int getFetchSize() {
+        return this.fetchSize;
     }
 
     @Override

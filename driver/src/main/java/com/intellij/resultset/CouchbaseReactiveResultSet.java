@@ -1,7 +1,8 @@
-package com.intellij;
+package com.intellij.resultset;
 
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.intellij.CouchbaseBaseStatement;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 
@@ -33,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-public class CouchbaseResultSet implements ResultSet {
+public class CouchbaseReactiveResultSet implements ResultSet {
 
     private final static String RESULT_COLUMN_NAME = "result";
 
@@ -46,17 +47,19 @@ public class CouchbaseResultSet implements ResultSet {
     private CouchbaseResultSetMetaData meta;
     private boolean isClosed = false;
 
-    CouchbaseResultSet(@NotNull Statement statement, @NotNull Mono<ReactiveQueryResult> queryResult,
-                       boolean returnNullStrings) {
+    public CouchbaseReactiveResultSet(@NotNull CouchbaseBaseStatement statement,
+                                      @NotNull Mono<ReactiveQueryResult> queryResult,
+                                      boolean returnNullStrings) {
         this.statement = statement;
         this.stream = queryResult.flux()
                 .flatMap(ReactiveQueryResult::rowsAsObject)
-                .toStream();
+                .toStream(statement.getFetchSize());
         this.iterator = stream.iterator();
         this.returnNullStrings = returnNullStrings;
     }
 
-    CouchbaseResultSet(@NotNull Statement statement, @NotNull Mono<ReactiveQueryResult> queryResult) {
+    public CouchbaseReactiveResultSet(@NotNull CouchbaseBaseStatement statement,
+                                      @NotNull Mono<ReactiveQueryResult> queryResult) {
         this(statement, queryResult, true);
     }
 

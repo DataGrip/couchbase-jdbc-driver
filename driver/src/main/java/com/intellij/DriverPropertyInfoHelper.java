@@ -9,6 +9,8 @@ public class DriverPropertyInfoHelper {
   public static final String ENABLE_SSL_DEFAULT = "false";
   public static final String USER = "user";
   public static final String PASSWORD = "password";
+  public static final String META_SAMPLING_SIZE = "meta.sampling.size";
+  public static final int META_SAMPLING_SIZE_DEFAULT = 1000;
   private static final String[] choices = new String[]{"true", "false"};
 
 
@@ -16,8 +18,11 @@ public class DriverPropertyInfoHelper {
     ArrayList<DriverPropertyInfo> propInfos = new ArrayList<>();
 
     addPropInfo(propInfos, ENABLE_SSL, ENABLE_SSL_DEFAULT, "Enable ssl.", choices);
-    addPropInfo(propInfos, USER, null, "Username.", null);
-    addPropInfo(propInfos, PASSWORD, null, "Password.", null);
+    addPropInfo(propInfos, USER, "", "Username.", null);
+    addPropInfo(propInfos, PASSWORD, "", "Password.", null);
+    addPropInfo(propInfos, META_SAMPLING_SIZE, Integer.toString(META_SAMPLING_SIZE_DEFAULT),
+            "Number of documents that will be fetched per collection in order " +
+            "to return meta information from DatabaseMetaData.getColumns method.", null);
 
     return propInfos.toArray(new DriverPropertyInfo[0]);
   }

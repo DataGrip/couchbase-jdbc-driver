@@ -1,6 +1,10 @@
 package com.intellij;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.intellij.meta.ColumnInfo;
+import com.intellij.meta.TableInfo;
+import com.intellij.resultset.CouchbaseListResultSet;
+import com.intellij.resultset.CouchbaseResultSetMetaData;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -8,13 +12,16 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.util.List;
+import java.util.*;
+
+import static com.intellij.EscapingUtil.stripBackquotes;
+import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
 
 /**
  * Couchbase namespaces are equivalent to catalogs for this driver. Schemas aren't used. Couchbase buckets are
  * equivalent to tables, in that each bucket is a table.
  */
+@SuppressWarnings({"SqlDialectInspection", "SqlNoDataSourceInspection"})
 public class CouchbaseMetaData implements DatabaseMetaData {
 
     private static final String DB_NAME = "Couchbase";
@@ -28,36 +35,257 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getSchemas() {
-        return null;
+    public ResultSet getSchemas() throws SQLException {
+        return getSchemas(null, null);
     }
 
     @Override
     public ResultSet getCatalogs() {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
-    public ResultSet getTables(String catalogName, String schemaPattern,
-                               String tableNamePattern, String[] types) {
-        return null;
+    public ResultSet getTables(String catalogName, String schemaPattern, String tableNamePattern, String[] types)
+            throws SQLException{
+        String sql = "SELECT null AS TABLE_CAT, namespace_id AS TABLE_SCHEM, name AS TABLE_NAME, " +
+                "'TABLE' AS TABLE_TYPE, null AS REMARKS, null AS TYPE_CAT, null AS TYPE_SCHEM, null AS TYPE_NAME, " +
+                "null AS SELF_REFERENCING_COL_NAME, null AS REF_GENERATION FROM system:keyspaces";
+        if (schemaPattern != null || tableNamePattern != null) {
+            sql += " WHERE ";
+            if (schemaPattern != null) {
+                sql += "namespace_id LIKE '" + schemaPattern + "'";
+            }
+            if (schemaPattern != null && tableNamePattern != null) {
+                sql += " AND ";
+            }
+            if (tableNamePattern != null) {
+                sql += "name LIKE '" + tableNamePattern +"'";
+            }
+        }
+        sql += " ORDER BY TABLE_TYPE, TABLE_CAT, TABLE_SCHEM, TABLE_NAME";
+
+        try (CouchbaseStatement statement = connection.createStatement()) {
+            CouchbaseListResultSet resultSet = statement.executeMetaQuery(sql);
+            //todo: probably add here system keyspaces
+            resultSet.setMetadata(new CouchbaseResultSetMetaData(Arrays.asList(
+                    createColumn("TABLE_CAT", "string"),
+                    createColumn("TABLE_SCHEM", "string"),
+                    createColumn("TABLE_NAME", "string"),
+                    createColumn("TABLE_TYPE", "string"),
+                    createColumn("REMARKS", "string"),
+                    createColumn("TYPE_CAT", "string"),
+                    createColumn("TYPE_SCHEM", "string"),
+                    createColumn("TYPE_NAME", "string"),
+                    createColumn("SELF_REFERENCING_COL_NAME", "string"),
+                    createColumn("REF_GENERATION", "string")
+            )));
+            return resultSet;
+        }
     }
 
-    public ResultSet getColumns(String catalogName, String schemaName,
-                                String tableNamePattern, String columnNamePattern) {
-        return null;
+    public ResultSet getColumns(String catalog, String schemaPattern,
+                                String tableNamePattern, String columnNamePattern) throws SQLException {
+        CouchbaseDocumentsSampler sampler = new CouchbaseDocumentsSampler(connection);
+        try (ResultSet tables = getTables(catalog, schemaPattern, tableNamePattern, null)) {
+            CouchbaseListResultSet listResultSet = new CouchbaseListResultSet(getColumnsInfoRows(sampler, tables));
+            listResultSet.setMetadata(createColumnsMeta());
+            return listResultSet;
+        }
     }
 
-    public ResultSet getPrimaryKeys(String catalogName, String schemaName, String tableNamePattern) {
-        return null;
+    private static List<Map<String, Object>> getColumnsInfoRows(CouchbaseDocumentsSampler sampler,
+                                                                ResultSet tablesRs) throws SQLException {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (TableInfo table : getTablesList(tablesRs)) {
+            populateColumnsResultSet(rows, sampler.sample(table.getName()), table);
+        }
+        return rows;
+    }
+
+    private static List<TableInfo> getTablesList(ResultSet resultSet) throws SQLException {
+        List<TableInfo> tables = new ArrayList<>();
+        while (resultSet.next()) {
+            String tableName = resultSet.getString("TABLE_NAME");
+            String tableSchema = resultSet.getString("TABLE_SCHEM");
+            if (tableName != null) {
+                tables.add(new TableInfo(tableName, tableSchema));
+            }
+        }
+        return tables;
+    }
+
+    private static void populateColumnsResultSet(List<Map<String, Object>> rs, Collection<ColumnInfo> columns,
+                                                 TableInfo table) {
+        for (ColumnInfo column : columns) {
+            Map<String, Object> row = new HashMap<>(23);
+            row.put("TABLE_CAT", null);
+            row.put("TABLE_SCHEM", table.getSchema());
+            row.put("TABLE_NAME", table.getName());
+            row.put("COLUMN_NAME", column.getName());
+            row.put("DATA_TYPE", column.getType());
+            row.put("TYPE_NAME", column.getTypeName());
+            row.put("COLUMN_SIZE", null);
+            row.put("BUFFER_LENGTH", null);
+            row.put("DECIMAL_DIGITS", null);
+            row.put("NUM_PREC_RADIX", null);
+            row.put("NULLABLE", columnNullable);
+            row.put("REMARKS", null);
+            row.put("COLUMN_DEF", null);
+            row.put("SQL_DATA_TYPE", null);
+            row.put("SQL_DATETIME_SUB", null);
+            row.put("CHAR_OCTET_LENGTH", null);
+            row.put("ORDINAL_POSITION", null);
+            row.put("IS_NULLABLE", "YES");
+            row.put("SCOPE_CATLOG", null);
+            row.put("SCOPE_SCHEMA", null);
+            row.put("SCOPE_TABLE", null);
+            row.put("SOURCE_DATA_TYPE", null);
+            row.put("IS_AUTOINCREMENT", "NO");
+            rs.add(row);
+        }
+    }
+
+    private static CouchbaseResultSetMetaData createColumnsMeta() {
+        return new CouchbaseResultSetMetaData(Arrays.asList(
+                createColumn("TABLE_CAT", "string"),
+                createColumn("TABLE_SCHEM", "string"),
+                createColumn("TABLE_NAME", "string"),
+                createColumn("COLUMN_NAME", "string"),
+                createColumn("DATA_TYPE", "numeric"),
+                createColumn("TYPE_NAME", "numeric"),
+                createColumn("COLUMN_SIZE", "numeric"),
+                createColumn("BUFFER_LENGTH", "numeric"),
+                createColumn("DECIMAL_DIGITS", "numeric"),
+                createColumn("NUM_PREC_RADIX", "numeric"),
+                createColumn("NULLABLE", "numeric"),
+                createColumn("REMARKS", "string"),
+                createColumn("COLUMN_DEF", "string"),
+                createColumn("SQL_DATA_TYPE", "numeric"),
+                createColumn("SQL_DATETIME_SUB", "numeric"),
+                createColumn("CHAR_OCTET_LENGTH", "numeric"),
+                createColumn("ORDINAL_POSITION", "numeric"),
+                createColumn("IS_NULLABLE", "string"),
+                createColumn("SCOPE_CATLOG", "string"),
+                createColumn("SCOPE_SCHEMA", "string"),
+                createColumn("SCOPE_TABLE", "string"),
+                createColumn("SOURCE_DATA_TYPE", "numeric"),
+                createColumn("IS_AUTOINCREMENT", "string")
+        ));
+    }
+
+    public ResultSet getPrimaryKeys(String catalogName, String schemaName, String tableNamePattern)
+            throws SQLException {
+        String sql = "SELECT null AS TABLE_CAT, namespace_id AS TABLE_SCHEM, keyspace_id AS TABLE_NAME, " +
+                "'id' AS COLUMN_NAME, 1 AS KEY_SEQ, name AS PK_NAME FROM system:indexes WHERE is_primary = true";
+        if (schemaName != null) {
+            sql += " AND namespace_id LIKE '" + schemaName + "'";
+        }
+        if (tableNamePattern != null) {
+            sql += " AND keyspace_id LIKE '" + tableNamePattern + "'";
+        }
+        sql += " ORDER BY COLUMN_NAME, TABLE_SCHEM, TABLE_NAME";
+
+        try (CouchbaseStatement statement = connection.createStatement()) {
+            CouchbaseListResultSet listResultSet = statement.executeMetaQuery(sql);
+            listResultSet.setMetadata(new CouchbaseResultSetMetaData(Arrays.asList(
+                    createColumn("TABLE_CAT", "string"),
+                    createColumn("TABLE_SCHEM", "string"),
+                    createColumn("TABLE_NAME", "string"),
+                    createColumn("COLUMN_NAME", "string"),
+                    createColumn("KEY_SEQ", "short"),
+                    createColumn("PK_NAME", "string")
+            )));
+            return listResultSet;
+        }
     }
 
     public ResultSet getIndexInfo(String catalogName, String schemaName, String tableNamePattern, boolean unique,
-                                  boolean approximate) {
-        return null;
+                                  boolean approximate) throws SQLException {
+        String sql = "SELECT namespace_id, keyspace_id, name, index_key, is_primary FROM system:indexes";
+        if (tableNamePattern != null || schemaName != null || unique) {
+            sql += " WHERE";
+            List<String> clauses = new ArrayList<>();
+            if (tableNamePattern != null) {
+                clauses.add(" keyspace_id LIKE '" + tableNamePattern + "'");
+            }
+            if (schemaName != null) {
+                clauses.add(" namespace_id LIKE '" + schemaName + "'");
+            }
+            if (unique) {
+                clauses.add(" is_primary = true");
+            }
+            sql += String.join(" AND ", clauses);
+        }
+        sql += " ORDER BY name";
+
+        try (CouchbaseStatement statement = connection.createStatement()) {
+            try (ResultSet resultSet = statement.executeQuery(sql)) {
+                CouchbaseListResultSet listResultSet = new CouchbaseListResultSet(getIndexInfoRows(resultSet));
+                listResultSet.setMetadata(createIndexMeta());
+                return listResultSet;
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> getIndexInfoRows(ResultSet resultSet) throws SQLException {
+        List<Map<String, Object>> resultRows = new ArrayList<>();
+        while (resultSet.next()) {
+            Map<String, Object> row = (Map<String, Object>) resultSet.getObject(1);
+            List<?> indexKeys = (List<?>) row.get("index_key");
+            if (indexKeys == null || indexKeys.size() == 0) {
+                resultRows.add(createIndexInfoCol(row.get("namespace_id"), row.get("keyspace_id"),
+                        row.get("name"), "id", 1, row.get("is_primary")));
+            } else {
+                int ordinal = 1;
+                for (Object indexKey : indexKeys) {
+                    resultRows.add(createIndexInfoCol(row.get("namespace_id"), row.get("keyspace_id"),
+                            row.get("name"), indexKey.toString(), ordinal, row.get("is_primary")));
+                    ordinal++;
+                }
+            }
+        }
+        return resultRows;
+    }
+
+    private static Map<String, Object> createIndexInfoCol(Object namespaceId, Object keyspaceId, Object name,
+                                                          String columnName, int ordinal, Object isPrimary) {
+        Map<String, Object> indexCol = new HashMap<>(13);
+        indexCol.put("TABLE_CAT", null);
+        indexCol.put("TABLE_SCHEM", namespaceId);
+        indexCol.put("TABLE_NAME", keyspaceId);
+        indexCol.put("NON_UNIQUE", !Boolean.parseBoolean(String.valueOf(isPrimary)));
+        indexCol.put("INDEX_QUALIFIER", null);
+        indexCol.put("INDEX_NAME", name);
+        indexCol.put("TYPE", tableIndexHashed);
+        indexCol.put("ORDINAL_POSITION", ordinal);
+        indexCol.put("COLUMN_NAME", stripBackquotes(columnName));
+        indexCol.put("ASC_OR_DESC", "A");
+        indexCol.put("CARDINALITY", 0);
+        indexCol.put("PAGES", 0);
+        indexCol.put("FILTER_CONDITION", null);
+        return indexCol;
+    }
+
+    private static CouchbaseResultSetMetaData createIndexMeta() {
+        return new CouchbaseResultSetMetaData(Arrays.asList(
+                createColumn("TABLE_CAT", "string"),
+                createColumn("TABLE_SCHEM", "string"),
+                createColumn("TABLE_NAME", "string"),
+                createColumn("NON_UNIQUE", "boolean"),
+                createColumn("INDEX_QUALIFIER", "string"),
+                createColumn("INDEX_NAME", "string"),
+                createColumn("TYPE", "numeric"),
+                createColumn("ORDINAL_POSITION", "numeric"),
+                createColumn("COLUMN_NAME", "numeric"),
+                createColumn("ASC_OR_DESC", "string"),
+                createColumn("CARDINALITY", "numeric"),
+                createColumn("PAGES", "numeric"),
+                createColumn("FILTER_CONDITION", "numeric")
+        ));
     }
 
     public ResultSet getTypeInfo() {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     public <T> T unwrap(Class<T> iface) throws SQLException {
@@ -368,7 +596,6 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public boolean supportsSchemasInPrivilegeDefinitions() {
-        //todo
         return false;
     }
 
@@ -389,7 +616,6 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public boolean supportsCatalogsInPrivilegeDefinitions() {
-        //todo
         return false;
     }
 
@@ -446,12 +672,10 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public boolean supportsOpenStatementsAcrossCommit() {
-        //todo
         return false;
     }
 
     public boolean supportsOpenStatementsAcrossRollback() {
-        //todo
         return false;
     }
 
@@ -570,59 +794,57 @@ public class CouchbaseMetaData implements DatabaseMetaData {
 
     public ResultSet getProcedures(String catalogName, String schemaPattern,
                                    String procedureNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getProcedureColumns(String catalogName, String schemaPattern, String procedureNamePattern,
                                          String columnNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getTableTypes() {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getColumnPrivileges(String catalogName, String schemaName,
                                          String table, String columnNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getTablePrivileges(String catalogName, String schemaPattern, String tableNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getBestRowIdentifier(String catalogName, String schemaName, String table, int scope,
                                           boolean nullable) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getVersionColumns(String catalogName, String schemaName, String table) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getExportedKeys(String catalogName, String schemaName, String tableNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getImportedKeys(String catalogName, String schemaName, String tableNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
-
 
     @Override
     public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable,
                                        String foreignCatalog, String foreignSchema, String foreignTable) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
-
 
     @Override
     public boolean supportsResultSetType(int type) {
@@ -687,7 +909,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
 
     @Override
     public ResultSet getUDTs(String catalogName, String schemaPattern, String typeNamePattern, int[] types) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
@@ -718,18 +940,18 @@ public class CouchbaseMetaData implements DatabaseMetaData {
 
     @Override
     public ResultSet getSuperTypes(String catalogName, String schemaPattern, String typeNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getSuperTables(String catalogName, String schemaPattern, String tableNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getAttributes(String catalogName, String schemaPattern, String typeNamePattern,
                                    String attributeNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
@@ -783,8 +1005,20 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getSchemas(String catalogName, String schemaPattern) {
-        return null;
+    public ResultSet getSchemas(String catalogName, String schemaPattern) throws SQLException {
+        String sql = "SELECT name AS TABLE_SCHEM, null AS TABLE_CATALOG FROM system:namespaces";
+        if (schemaPattern != null) {
+            sql += " WHERE name LIKE '" + schemaPattern + "'";
+        }
+        sql += " ORDER BY TABLE_CATALOG, TABLE_SCHEM";
+        try (CouchbaseStatement statement = connection.createStatement()) {
+            CouchbaseListResultSet resultSet = statement.executeMetaQuery(sql);
+            resultSet.setMetadata(new CouchbaseResultSetMetaData(Arrays.asList(
+                    createColumn("TABLE_SCHEM", "string"),
+                    createColumn("TABLE_CATALOG", "string")
+            )));
+            return resultSet;
+        }
     }
 
     @Override
@@ -798,25 +1032,25 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getClientInfoProperties() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public ResultSet getClientInfoProperties() {
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getFunctions(String catalogName, String schemaPattern, String functionNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getFunctionColumns(String catalogName, String schemaPattern, String functionNamePattern,
                                         String columnNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override
     public ResultSet getPseudoColumns(String catalogName, String schemaPattern, String tableNamePattern,
                                       String columnNamePattern) {
-        return null;
+        return CouchbaseListResultSet.empty();
     }
 
     @Override

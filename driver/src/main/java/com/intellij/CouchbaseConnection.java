@@ -50,6 +50,10 @@ public class CouchbaseConnection implements Connection {
         return cluster;
     }
 
+    Properties getProperties() {
+        return properties;
+    }
+
     CouchbaseClientURI getUri() {
         return uri;
     }
@@ -67,7 +71,7 @@ public class CouchbaseConnection implements Connection {
     }
 
     @Override
-    public Statement createStatement() throws SQLException {
+    public CouchbaseStatement createStatement() throws SQLException {
         checkClosed();
         try {
             return new CouchbaseStatement(cluster);

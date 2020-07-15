@@ -2,6 +2,7 @@ package com.intellij;
 
 import com.couchbase.client.java.Cluster;
 import com.intellij.resultset.CouchbaseReactiveResultSet;
+import com.intellij.resultset.CouchbaseListResultSet;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.ResultSet;
@@ -20,6 +21,15 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
             result = new CouchbaseReactiveResultSet(this, cluster.reactive().query(sql));
             resultSets.add(result);
             return result;
+        } catch (Throwable t) {
+            throw new SQLException(t.getMessage(), t);
+        }
+    }
+
+    CouchbaseListResultSet executeMetaQuery(String sql) throws SQLException {
+        checkClosed();
+        try {
+            return new CouchbaseListResultSet(cluster.query(sql));
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }

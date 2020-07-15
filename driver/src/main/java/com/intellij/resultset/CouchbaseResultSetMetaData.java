@@ -1,15 +1,12 @@
 package com.intellij.resultset;
 
+import com.intellij.types.ColumnTypeHelper;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.sql.Types;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 
 public class CouchbaseResultSetMetaData implements ResultSetMetaData {
 
@@ -22,6 +19,10 @@ public class CouchbaseResultSetMetaData implements ResultSetMetaData {
 
     public CouchbaseResultSetMetaData(@NotNull List<ColumnMetaData> columnMetaData) {
         this.columnMetaData = columnMetaData;
+    }
+
+    public static ColumnMetaData createColumn(String name, String typeName) {
+        return new ColumnMetaData(name, typeName);
     }
 
     public int findColumn(String columnLabel) {
@@ -149,36 +150,20 @@ public class CouchbaseResultSetMetaData implements ResultSetMetaData {
     }
 
     public static class ColumnMetaData {
-        private static final Map<String, Integer> javaTypeMap = new HashMap<>();
-        private static final Map<String, String> typeNameMap = new HashMap<>();
-
-        static {
-            javaTypeMap.put("map", Types.JAVA_OBJECT);
-            typeNameMap.put("map", "java.util.Map");
-        }
-
         private final String name;
         private final String typeName;
 
-        ColumnMetaData(String name, String typeName) {
+        private ColumnMetaData(String name, String typeName) {
             this.name = name;
             this.typeName = typeName;
         }
 
-        int getJavaType() {
-            String lower = toLowerCase(typeName);
-            if (javaTypeMap.containsKey(lower)) return javaTypeMap.get(lower);
-            throw new IllegalArgumentException("Type name is not known: " + lower);
+        public int getJavaType() {
+            return ColumnTypeHelper.getJavaType(typeName);
         }
 
-        String getClassName() {
-            String lower = toLowerCase(typeName);
-            if (typeNameMap.containsKey(lower)) return typeNameMap.get(lower);
-            throw new IllegalArgumentException("Type name is not known: " + lower);
-        }
-
-        private String toLowerCase(String value) {
-            return value.toLowerCase(Locale.ENGLISH);
+        public String getClassName() {
+            return ColumnTypeHelper.getClassName(typeName);
         }
     }
 }

@@ -17,6 +17,8 @@ import java.util.List;
  */
 public class CouchbaseMetaData implements DatabaseMetaData {
 
+    private static final String DB_NAME = "Couchbase";
+
     private final CouchbaseConnection connection;
     private final CouchbaseJdbcDriver driver;
 
@@ -106,7 +108,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public String getDatabaseProductName() {
-        return "Couchbase";
+        return DB_NAME;
     }
 
     public String getDatabaseProductVersion() throws SQLException {
@@ -116,10 +118,21 @@ public class CouchbaseMetaData implements DatabaseMetaData {
         if (results.size() == 1) {
             JsonObject jsonObject = results.get(0);
             if (jsonObject.containsKey("$1")) {
-                return String.valueOf(jsonObject.get("$1"));
+                return parseVersion(String.valueOf(jsonObject.get("$1")));
             }
         }
         throw new SQLException("Unable to fetch database version");
+    }
+
+    private String parseVersion(String version) {
+        String[] split = version.split("[.-]");
+        if (split.length == 0) {
+            return null;
+        }
+        if (split.length == 1) {
+            return split[0];
+        }
+        return split[0] + "." + split[1];
     }
 
     public String getDriverName() {

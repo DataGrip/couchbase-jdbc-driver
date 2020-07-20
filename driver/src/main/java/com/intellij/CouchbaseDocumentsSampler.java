@@ -1,6 +1,8 @@
 package com.intellij;
 
+import com.couchbase.client.core.error.CouchbaseException;
 import com.intellij.meta.ColumnInfo;
+import com.intellij.meta.TableInfo;
 import com.intellij.types.ColumnTypeHelper;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,8 +17,11 @@ import java.util.Map;
 import static com.intellij.DriverPropertyInfoHelper.META_SAMPLING_SIZE;
 import static com.intellij.DriverPropertyInfoHelper.META_SAMPLING_SIZE_DEFAULT;
 import static com.intellij.EscapingUtil.escapeChars;
+import static com.intellij.EscapingUtil.wrapInBackquotes;
 
 public class CouchbaseDocumentsSampler {
+    private static final String INTRO_QUERY = "SELECT t.* FROM %s t LIMIT %d;";
+
     private final CouchbaseConnection connection;
     private final int sampleSize;
 
@@ -29,21 +34,31 @@ public class CouchbaseDocumentsSampler {
         this.sampleSize = sampleSize;
     }
 
-    @SuppressWarnings({"SqlDialectInspection", "SqlNoDataSourceInspection", "unchecked"})
-    public Collection<ColumnInfo> sample(String table) throws SQLException {
+    public Collection<ColumnInfo> sample(TableInfo table) throws SQLException {
         Map<String, ColumnInfo> columns = new HashMap<>();
-        String sql = "SELECT * FROM `" + table + "`";
+        String sql = String.format(INTRO_QUERY, qualifyTablePath(table), sampleSize);
         try (CouchbaseStatement statement = connection.createStatement()) {
             try (ResultSet resultSet = statement.executeQuery(sql)) {
-                int iteration = 0;
-                while (iteration < sampleSize && resultSet.next()) {
-                    iteration++;
-                    Map<String, Object> resultMap = (Map<String, Object>) resultSet.getObject(1);
-                    extractColumns(columns, (Map<String, Object>) resultMap.get(table), null);
+                doIterations(columns, resultSet);
+            } catch (CouchbaseException ex) {
+                //todo: maybe ignore all exceptions here
+                List<CouchbaseError.ErrorEntry> entries = CouchbaseError.create(ex).getErrorEntries();
+                if (!(entries.size() == 1 && entries.get(0).getErrorCode().startsWith("13"))) {
+                    throw new SQLException("Keyspace sampling failed.", ex);
                 }
             }
         }
         return columns.values();
+    }
+
+    @SuppressWarnings({"unchecked"})
+    private void doIterations(Map<String, ColumnInfo> columns, ResultSet resultSet) throws SQLException {
+        int iteration = 0;
+        while (iteration < sampleSize && resultSet.next()) {
+            iteration++;
+            Map<String, Object> resultMap = (Map<String, Object>) resultSet.getObject(1);
+            extractColumns(columns, resultMap, null);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -60,6 +75,10 @@ public class CouchbaseDocumentsSampler {
                 extractColumns(columns, (Map<String, Object>) value, name);
             }
         });
+    }
+
+    private static String qualifyTablePath(TableInfo table) {
+        return table.getSchema() + ":" + wrapInBackquotes(table.getName());
     }
 
     private static String fullyQualifyName(String parentName, String name) {

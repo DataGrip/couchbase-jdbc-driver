@@ -65,7 +65,9 @@ public class CouchbaseMetaData implements DatabaseMetaData {
 
         try (CouchbaseStatement statement = connection.createStatement()) {
             CouchbaseListResultSet resultSet = statement.executeMetaQuery(sql);
-            //todo: probably add here system keyspaces
+            if (CouchbaseSqlLikePattern.create(schemaPattern).matches("system")) {
+                resultSet.addRows(getSystemKeyspaces());
+            }
             resultSet.setMetadata(new CouchbaseResultSetMetaData(Arrays.asList(
                     createColumn("TABLE_CAT", "string"),
                     createColumn("TABLE_SCHEM", "string"),
@@ -82,6 +84,29 @@ public class CouchbaseMetaData implements DatabaseMetaData {
         }
     }
 
+    private static List<Map<String, Object>> getSystemKeyspaces() {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        List<String> keyspaceNames = Arrays.asList(
+                "dual", "datastores", "namespaces", "keyspaces", "indexes",
+                "prepareds", "completed_requests", "active_requests",
+                "my_user_info", "user_info", "nodes", "applicable_roles");
+        for (String name : keyspaceNames) {
+            Map<String, Object> row = new HashMap<>(10);
+            row.put("TABLE_CAT", null);
+            row.put("TABLE_SCHEM", "system");
+            row.put("TABLE_NAME", name);
+            row.put("TABLE_TYPE", "TABLE");
+            row.put("REMARKS", null);
+            row.put("TYPE_CAT", null);
+            row.put("TYPE_SCHEM", null);
+            row.put("TYPE_NAME", null);
+            row.put("SELF_REFERENCING_COL_NAME", null);
+            row.put("REF_GENERATION", null);
+            rows.add(row);
+        }
+        return rows;
+    }
+
     public ResultSet getColumns(String catalog, String schemaPattern,
                                 String tableNamePattern, String columnNamePattern) throws SQLException {
         CouchbaseDocumentsSampler sampler = new CouchbaseDocumentsSampler(connection);
@@ -96,7 +121,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
                                                                 ResultSet tablesRs) throws SQLException {
         List<Map<String, Object>> rows = new ArrayList<>();
         for (TableInfo table : getTablesList(tablesRs)) {
-            populateColumnsResultSet(rows, sampler.sample(table.getName()), table);
+            populateColumnsResultSet(rows, sampler.sample(table), table);
         }
         return rows;
     }
@@ -1006,19 +1031,29 @@ public class CouchbaseMetaData implements DatabaseMetaData {
 
     @Override
     public ResultSet getSchemas(String catalogName, String schemaPattern) throws SQLException {
-        String sql = "SELECT name AS TABLE_SCHEM, null AS TABLE_CATALOG FROM system:namespaces";
+        String sql = "SELECT id AS TABLE_SCHEM, null AS TABLE_CATALOG FROM system:namespaces";
         if (schemaPattern != null) {
             sql += " WHERE name LIKE '" + schemaPattern + "'";
         }
         sql += " ORDER BY TABLE_CATALOG, TABLE_SCHEM";
         try (CouchbaseStatement statement = connection.createStatement()) {
             CouchbaseListResultSet resultSet = statement.executeMetaQuery(sql);
+            if (CouchbaseSqlLikePattern.create(schemaPattern).matches("system")) {
+                resultSet.addRows(getSystemSchemaInfo());
+            }
             resultSet.setMetadata(new CouchbaseResultSetMetaData(Arrays.asList(
                     createColumn("TABLE_SCHEM", "string"),
                     createColumn("TABLE_CATALOG", "string")
             )));
             return resultSet;
         }
+    }
+
+    private static List<Map<String, Object>> getSystemSchemaInfo() {
+        Map<String, Object> systemSchema = new HashMap<>();
+        systemSchema.put("TABLE_SCHEM", "system");
+        systemSchema.put("TABLE_CATALOG", null);
+        return Collections.singletonList(systemSchema);
     }
 
     @Override

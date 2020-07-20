@@ -28,7 +28,7 @@ public class CouchbaseResultSetMetaData implements ResultSetMetaData {
     public int findColumn(String columnLabel) {
         for (int i = 0; i < columnMetaData.size(); i++) {
             if (columnMetaData.get(i).name.equals(columnLabel)) {
-                return i;
+                return i + 1;
             }
         }
         return -1;

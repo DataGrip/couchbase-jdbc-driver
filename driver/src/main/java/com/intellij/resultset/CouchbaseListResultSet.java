@@ -294,7 +294,11 @@ public class CouchbaseListResultSet implements ResultSet {
 
     @Override
     public int findColumn(String columnLabel) throws SQLException {
-        return getMetaData().findColumn(columnLabel);
+        int col = getMetaData().findColumn(columnLabel);
+        if (col == -1) {
+            throw new SQLException("No such column " + columnLabel);
+        }
+        return col;
     }
 
     @Override

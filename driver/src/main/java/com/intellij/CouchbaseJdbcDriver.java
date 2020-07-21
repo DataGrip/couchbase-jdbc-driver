@@ -65,7 +65,7 @@ public class CouchbaseJdbcDriver implements Driver {
     }
 
     String getVersion() {
-        return "0.2.0";
+        return "0.3.0";
     }
 
     @Override
@@ -75,7 +75,7 @@ public class CouchbaseJdbcDriver implements Driver {
 
     @Override
     public int getMinorVersion() {
-        return 2;
+        return 3;
     }
 
     @Override

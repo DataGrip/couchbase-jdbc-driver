@@ -1,9 +1,10 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ReactiveCluster;
+import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.intellij.resultset.CouchbaseReactiveResultSet;
+import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 import reactor.util.concurrent.Queues;
 
@@ -13,23 +14,31 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.util.Properties;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import static com.intellij.DriverPropertyInfoHelper.ScanConsistency.getQueryScanConsistency;
 
 /**
  * @author Liudmila Kornilova
  **/
 public abstract class CouchbaseBaseStatement implements Statement {
     protected final Cluster cluster;
-    protected final ReactiveCluster reactiveCluster;
+    protected final Properties properties;
     protected CouchbaseReactiveResultSet result;
     protected Queue<CouchbaseReactiveResultSet> resultSets = new ConcurrentLinkedQueue<>();
     private int fetchSize = Queues.SMALL_BUFFER_SIZE;
     private boolean isClosed = false;
 
-    CouchbaseBaseStatement(Cluster cluster) {
+    CouchbaseBaseStatement(@NotNull Cluster cluster, @NotNull Properties properties) {
+        this.properties = properties;
         this.cluster = cluster;
-        this.reactiveCluster = cluster.reactive();
+    }
+
+    protected QueryOptions makeQueryOptions() {
+        return QueryOptions.queryOptions()
+                .scanConsistency(getQueryScanConsistency(properties));
     }
 
     @Override
@@ -51,9 +60,9 @@ public abstract class CouchbaseBaseStatement implements Statement {
         return isClosed;
     }
 
-    protected boolean executeInner(Mono<ReactiveQueryResult> resultSet, boolean returnNullStrings) throws SQLException {
+    protected boolean executeInner(Mono<ReactiveQueryResult> resultSet) throws SQLException {
         try {
-            result = new CouchbaseReactiveResultSet(this, resultSet, returnNullStrings);
+            result = new CouchbaseReactiveResultSet(this, resultSet);
             resultSets.add(result);
             return true;
         } catch (Throwable t) {

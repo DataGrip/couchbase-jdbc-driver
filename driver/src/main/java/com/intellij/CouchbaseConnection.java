@@ -23,9 +23,6 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 
 public class CouchbaseConnection implements Connection {
-    private static final String RETURN_NULL_STRINGS_FROM_INTRO_QUERY_KEY =
-            "couchbase.jdbc.return.null.strings.from.intro.query";
-
     private final Cluster cluster;
     private final CouchbaseJdbcDriver driver;
     private final CouchbaseClientURI uri;
@@ -46,7 +43,7 @@ public class CouchbaseConnection implements Connection {
         return null;
     }
 
-    Cluster getCluster() {
+    public Cluster getCluster() {
         return cluster;
     }
 
@@ -74,7 +71,7 @@ public class CouchbaseConnection implements Connection {
     public CouchbaseStatement createStatement() throws SQLException {
         checkClosed();
         try {
-            return new CouchbaseStatement(cluster);
+            return new CouchbaseStatement(cluster, properties);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -95,9 +92,7 @@ public class CouchbaseConnection implements Connection {
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         checkClosed();
         try {
-            boolean returnNullStringsFromIntroQuery =
-                    Boolean.parseBoolean(properties.getProperty(RETURN_NULL_STRINGS_FROM_INTRO_QUERY_KEY));
-            return new CouchbasePreparedStatement(cluster, sql, returnNullStringsFromIntroQuery);
+            return new CouchbasePreparedStatement(cluster, sql, properties);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }

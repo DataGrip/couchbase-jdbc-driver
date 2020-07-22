@@ -28,19 +28,18 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Properties;
 
 import static com.intellij.DateUtil.Direction;
 import static com.intellij.DateUtil.considerTimeZone;
+import static com.intellij.DriverPropertyInfoHelper.ScanConsistency.getQueryScanConsistency;
 
 public class CouchbasePreparedStatement extends CouchbaseBaseStatement implements PreparedStatement {
-
-    private final boolean returnNullStrings;
     private final String sql;
     private Object[] params;
 
-    CouchbasePreparedStatement(@NotNull Cluster cluster, @NotNull String sql, boolean returnNullStrings) {
-        super(cluster);
-        this.returnNullStrings = returnNullStrings;
+    CouchbasePreparedStatement(@NotNull Cluster cluster, @NotNull String sql, @NotNull Properties properties) {
+        super(cluster, properties);
         this.sql = sql;
     }
 
@@ -93,7 +92,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
         checkClosed();
         try {
             result = new CouchbaseReactiveResultSet(this,
-                    cluster.reactive().query(sql, bindParameters()), returnNullStrings);
+                    cluster.reactive().query(sql, bindParameters()));
             resultSets.add(result);
             return 1;
         } catch (Throwable t) {
@@ -257,7 +256,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     public boolean execute() throws SQLException {
         checkClosed();
         try {
-            return executeInner(cluster.reactive().query(sql, bindParameters()), returnNullStrings);
+            return executeInner(cluster.reactive().query(sql, bindParameters()));
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -265,7 +264,9 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
 
     private QueryOptions bindParameters() {
         try {
-            QueryOptions options = QueryOptions.queryOptions().adhoc(false);
+            QueryOptions options = QueryOptions.queryOptions()
+                    .scanConsistency(getQueryScanConsistency(properties))
+                    .adhoc(false);
             if (params != null && params.length > 0) {
                 options = options.parameters(JsonArray.from(params));
             }

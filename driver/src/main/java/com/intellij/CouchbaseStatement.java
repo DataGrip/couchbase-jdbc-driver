@@ -1,6 +1,7 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
+import com.intellij.executor.CouchbaseExecutor;
 import com.intellij.resultset.CouchbaseReactiveResultSet;
 import com.intellij.resultset.CouchbaseListResultSet;
 import org.jetbrains.annotations.NotNull;
@@ -8,17 +9,18 @@ import org.jetbrains.annotations.NotNull;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Properties;
 
 public class CouchbaseStatement extends CouchbaseBaseStatement {
-    CouchbaseStatement(@NotNull Cluster cluster) {
-        super(cluster);
+    CouchbaseStatement(@NotNull Cluster cluster, @NotNull Properties properties) {
+        super(cluster, properties);
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         checkClosed();
         try {
-            result = new CouchbaseReactiveResultSet(this, cluster.reactive().query(sql));
+            result = new CouchbaseReactiveResultSet(this, cluster.reactive().query(sql, makeQueryOptions()));
             resultSets.add(result);
             return result;
         } catch (Throwable t) {
@@ -29,7 +31,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     CouchbaseListResultSet executeMetaQuery(String sql) throws SQLException {
         checkClosed();
         try {
-            return new CouchbaseListResultSet(cluster.query(sql));
+            return new CouchbaseListResultSet(cluster.query(sql, makeQueryOptions()));
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -40,7 +42,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
         //todo: learn to handle update queries
         checkClosed();
         try {
-            result = new CouchbaseReactiveResultSet(this, cluster.reactive().query(sql));
+            result = new CouchbaseReactiveResultSet(this, cluster.reactive().query(sql, makeQueryOptions()));
             resultSets.add(result);
             return 1;
         } catch (Throwable t) {
@@ -52,7 +54,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     public boolean execute(String sql) throws SQLException {
         checkClosed();
         try {
-            return executeInner(cluster.reactive().query(sql), true);
+            return executeInner(cluster.reactive().query(sql, makeQueryOptions()));
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }

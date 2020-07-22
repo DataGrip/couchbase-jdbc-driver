@@ -41,7 +41,6 @@ public class CouchbaseReactiveResultSet implements ResultSet {
     private final static String RESULT_COLUMN_NAME = "result";
 
     private final Statement statement;
-    private final boolean returnNullStrings;
     private final Stream<JsonObject> stream;
     private Iterator<JsonObject> iterator;
     private JsonObject currentRow;
@@ -50,19 +49,12 @@ public class CouchbaseReactiveResultSet implements ResultSet {
     private boolean isClosed = false;
 
     public CouchbaseReactiveResultSet(@NotNull CouchbaseBaseStatement statement,
-                                      @NotNull Mono<ReactiveQueryResult> queryResult,
-                                      boolean returnNullStrings) {
+                                      @NotNull Mono<ReactiveQueryResult> queryResult) {
         this.statement = statement;
         this.stream = queryResult.flux()
                 .flatMap(ReactiveQueryResult::rowsAsObject)
                 .toStream(statement.getFetchSize());
         this.iterator = stream.iterator();
-        this.returnNullStrings = returnNullStrings;
-    }
-
-    public CouchbaseReactiveResultSet(@NotNull CouchbaseBaseStatement statement,
-                                      @NotNull Mono<ReactiveQueryResult> queryResult) {
-        this(statement, queryResult, true);
     }
 
     @Override
@@ -107,10 +99,7 @@ public class CouchbaseReactiveResultSet implements ResultSet {
         checkClosed();
         checkColumnNumber(columnIndex);
         if (currentRow == null) throw new SQLException("Exhausted ResultSet.");
-        String string = String.valueOf(currentRow);
-        return (string == null) ?
-                (returnNullStrings ? null : "") :
-                string;
+        return String.valueOf(currentRow);
     }
 
     @Override
@@ -118,10 +107,7 @@ public class CouchbaseReactiveResultSet implements ResultSet {
         checkClosed();
         checkColumnLabel(columnLabel);
         if (currentRow == null) throw new SQLException("Exhausted ResultSet.");
-        String string = String.valueOf(currentRow);
-        return (string == null) ?
-                (returnNullStrings ? null : "") :
-                string;
+        return String.valueOf(currentRow);
     }
 
     @Override

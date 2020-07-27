@@ -26,19 +26,22 @@ import static com.intellij.DriverPropertyInfoHelper.ScanConsistency.getQueryScan
 public abstract class CouchbaseBaseStatement implements Statement {
     protected final Cluster cluster;
     protected final Properties properties;
+    protected final boolean isReadOnly;
     protected CouchbaseReactiveResultSet result;
     protected Queue<CouchbaseReactiveResultSet> resultSets = new ConcurrentLinkedQueue<>();
     private int fetchSize = Queues.SMALL_BUFFER_SIZE;
     private boolean isClosed = false;
 
-    CouchbaseBaseStatement(@NotNull Cluster cluster, @NotNull Properties properties) {
+    CouchbaseBaseStatement(@NotNull Cluster cluster, @NotNull Properties properties, boolean isReadOnly) {
         this.properties = properties;
         this.cluster = cluster;
+        this.isReadOnly = isReadOnly;
     }
 
     protected QueryOptions makeQueryOptions() {
         return QueryOptions.queryOptions()
-                .scanConsistency(getQueryScanConsistency(properties));
+                .scanConsistency(getQueryScanConsistency(properties))
+                .readonly(isReadOnly);
     }
 
     @Override

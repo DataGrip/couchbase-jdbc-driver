@@ -43,7 +43,7 @@ public class CouchbaseConnection implements Connection {
         return null;
     }
 
-    public Cluster getCluster() {
+    Cluster getCluster() {
         return cluster;
     }
 
@@ -71,7 +71,7 @@ public class CouchbaseConnection implements Connection {
     public CouchbaseStatement createStatement() throws SQLException {
         checkClosed();
         try {
-            return new CouchbaseStatement(cluster, properties);
+            return new CouchbaseStatement(cluster, properties, isReadOnly);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -92,7 +92,7 @@ public class CouchbaseConnection implements Connection {
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         checkClosed();
         try {
-            return new CouchbasePreparedStatement(cluster, sql, properties);
+            return new CouchbasePreparedStatement(cluster, sql, properties, isReadOnly);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }

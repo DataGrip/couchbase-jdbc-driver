@@ -12,8 +12,8 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 
 public class CouchbaseStatement extends CouchbaseBaseStatement {
-    CouchbaseStatement(@NotNull Cluster cluster, @NotNull Properties properties) {
-        super(cluster, properties);
+    CouchbaseStatement(@NotNull Cluster cluster, @NotNull Properties properties, boolean isReadOnly) {
+        super(cluster, properties, isReadOnly);
     }
 
     @Override
@@ -56,7 +56,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
         try {
             return executeInner(cluster.reactive().query(sql, makeQueryOptions()));
         } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
+            throw new SQLException(t);
         }
     }
 

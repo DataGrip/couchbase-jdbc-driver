@@ -38,8 +38,9 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     private final String sql;
     private Object[] params;
 
-    CouchbasePreparedStatement(@NotNull Cluster cluster, @NotNull String sql, @NotNull Properties properties) {
-        super(cluster, properties);
+    CouchbasePreparedStatement(@NotNull Cluster cluster, @NotNull String sql, @NotNull Properties properties,
+                               boolean isReadOnly) {
+        super(cluster, properties, isReadOnly);
         this.sql = sql;
     }
 

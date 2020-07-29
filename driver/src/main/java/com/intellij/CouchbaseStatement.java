@@ -1,8 +1,7 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
-import com.intellij.executor.CouchbaseExecutor;
-import com.intellij.resultset.CouchbaseReactiveResultSet;
+import com.intellij.executor.CouchbaseCustomExecutor;
 import com.intellij.resultset.CouchbaseListResultSet;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,6 +9,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
+
+import static java.lang.Math.max;
 
 public class CouchbaseStatement extends CouchbaseBaseStatement {
     CouchbaseStatement(@NotNull Cluster cluster, @NotNull Properties properties, boolean isReadOnly) {
@@ -19,13 +20,11 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         checkClosed();
-        try {
-            result = new CouchbaseReactiveResultSet(this, cluster.reactive().query(sql, makeQueryOptions()));
-            resultSets.add(result);
-            return result;
-        } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
+        execute(sql);
+        if (result == null) {
+            throw new SQLException("No result set");
         }
+        return result;
     }
 
     CouchbaseListResultSet executeMetaQuery(String sql) throws SQLException {
@@ -39,15 +38,9 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        //todo: learn to handle update queries
         checkClosed();
-        try {
-            result = new CouchbaseReactiveResultSet(this, cluster.reactive().query(sql, makeQueryOptions()));
-            resultSets.add(result);
-            return 1;
-        } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
-        }
+        execute(sql);
+        return max(0, getUpdateCount());
     }
 
     @Override

@@ -14,21 +14,16 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.util.Objects;
 import java.util.Properties;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.intellij.DriverPropertyInfoHelper.ScanConsistency.getQueryScanConsistency;
 
-/**
- * @author Liudmila Kornilova
- **/
 public abstract class CouchbaseBaseStatement implements Statement {
     protected final Cluster cluster;
     protected final Properties properties;
     protected final boolean isReadOnly;
     protected CouchbaseReactiveResultSet result;
-    protected Queue<CouchbaseReactiveResultSet> resultSets = new ConcurrentLinkedQueue<>();
     private int fetchSize = Queues.SMALL_BUFFER_SIZE;
     private boolean isClosed = false;
 
@@ -46,8 +41,9 @@ public abstract class CouchbaseBaseStatement implements Statement {
 
     @Override
     public void close() {
-        resultSets.forEach(CouchbaseReactiveResultSet::close);
-        resultSets.clear();
+        if (result != null) {
+            result.close();
+        }
         result = null;
         isClosed = true;
     }
@@ -63,10 +59,14 @@ public abstract class CouchbaseBaseStatement implements Statement {
         return isClosed;
     }
 
-    protected boolean executeInner(Mono<ReactiveQueryResult> resultSet) throws SQLException {
+    protected boolean executeInner(Mono<ReactiveQueryResult> resultMono) throws SQLException {
         try {
-            result = new CouchbaseReactiveResultSet(this, resultSet);
-            resultSets.add(result);
+            ReactiveQueryResult result = resultMono.block();
+            Objects.requireNonNull(result, "Query did not return result");
+            if (this.result != null) {
+                this.result.close();
+            }
+            this.result = new CouchbaseReactiveResultSet(this, result);
             return true;
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
@@ -75,7 +75,6 @@ public abstract class CouchbaseBaseStatement implements Statement {
 
     @Override
     public boolean getMoreResults() {
-        // todo
         return false;
     }
 

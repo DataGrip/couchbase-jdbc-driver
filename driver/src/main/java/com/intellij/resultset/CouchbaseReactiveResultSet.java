@@ -49,10 +49,9 @@ public class CouchbaseReactiveResultSet implements ResultSet {
     private boolean isClosed = false;
 
     public CouchbaseReactiveResultSet(@NotNull CouchbaseBaseStatement statement,
-                                      @NotNull Mono<ReactiveQueryResult> queryResult) {
+                                      @NotNull ReactiveQueryResult queryResult) {
         this.statement = statement;
-        this.stream = queryResult.flux()
-                .flatMap(ReactiveQueryResult::rowsAsObject)
+        this.stream = queryResult.rowsAsObject()
                 .toStream(statement.getFetchSize());
         this.iterator = stream.iterator();
     }

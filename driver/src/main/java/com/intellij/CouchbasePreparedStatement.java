@@ -3,7 +3,6 @@ package com.intellij;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.query.QueryOptions;
-import com.intellij.resultset.CouchbaseReactiveResultSet;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
@@ -32,21 +31,27 @@ import java.util.Properties;
 
 import static com.intellij.DateUtil.Direction;
 import static com.intellij.DateUtil.considerTimeZone;
-import static com.intellij.DriverPropertyInfoHelper.ScanConsistency.getQueryScanConsistency;
+import static java.lang.Math.max;
 
 public class CouchbasePreparedStatement extends CouchbaseBaseStatement implements PreparedStatement {
     private final String sql;
-    private Object[] params;
+    private final Object[] params;
 
     CouchbasePreparedStatement(@NotNull Cluster cluster, @NotNull String sql, @NotNull Properties properties,
                                boolean isReadOnly) {
         super(cluster, properties, isReadOnly);
         this.sql = sql;
+        this.params = new Object[countPossibleParametersNumber(sql)];
     }
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        execute();
+        if (result == null) {
+            throw new SQLException("No result set");
+        }
+        return result;
     }
 
     @Override
@@ -61,9 +66,6 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
 
     @Override
     public void setObject(int parameterIndex, Object value) {
-        if (params == null) {
-            params = new Object[countPossibleParametersNumber(sql)];
-        }
         int idx = parameterIndex - 1;
         params[idx] = value;
     }
@@ -71,7 +73,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     private static int countPossibleParametersNumber(String sql) {
         int size = 0;
         for (char character : sql.toCharArray()) {
-            if (character == '$') {
+            if (character == '?') {
                 size++;
             }
         }
@@ -91,14 +93,36 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     @Override
     public int executeUpdate() throws SQLException {
         checkClosed();
+        execute();
+        return max(0, getUpdateCount());
+    }
+
+    @Override
+    public boolean execute() throws SQLException {
+        checkClosed();
         try {
-            result = new CouchbaseReactiveResultSet(this,
-                    cluster.reactive().query(sql, bindParameters()));
-            resultSets.add(result);
-            return 1;
+            return executeInner(cluster.reactive().query(sql, bindParameters()));
         } catch (Throwable t) {
-            throw new SQLException(t.getLocalizedMessage(), t);
+            throw new SQLException(t.getMessage(), t);
         }
+    }
+
+    private QueryOptions bindParameters() {
+        try {
+            QueryOptions options = makeQueryOptions()
+                    .adhoc(false);
+            if (params != null && params.length > 0) {
+                options = options.parameters(JsonArray.from(params));
+            }
+            return options;
+        } finally {
+            clearParams();
+        }
+    }
+
+    private void clearParams() {
+        if (params == null) return;
+        Arrays.fill(params, null);
     }
 
     @Override
@@ -143,7 +167,9 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     }
 
     @Override
-    public void setNull(int parameterIndex, int sqlType) {
+    public void setNull(int parameterIndex, int sqlType) throws SQLException {
+        checkClosed();
+        setObject(parameterIndex, null);
     }
 
     @Override
@@ -251,35 +277,6 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
         throw new SQLFeatureNotSupportedException();
-    }
-
-    @Override
-    public boolean execute() throws SQLException {
-        checkClosed();
-        try {
-            return executeInner(cluster.reactive().query(sql, bindParameters()));
-        } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
-        }
-    }
-
-    private QueryOptions bindParameters() {
-        try {
-            QueryOptions options = QueryOptions.queryOptions()
-                    .scanConsistency(getQueryScanConsistency(properties))
-                    .adhoc(false);
-            if (params != null && params.length > 0) {
-                options = options.parameters(JsonArray.from(params));
-            }
-            return options;
-        } finally {
-            clearParams();
-        }
-    }
-
-    private void clearParams() {
-        if (params == null) return;
-        Arrays.fill(params, null);
     }
 
     @Override

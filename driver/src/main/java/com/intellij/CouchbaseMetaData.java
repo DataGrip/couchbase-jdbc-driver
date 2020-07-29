@@ -225,7 +225,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
 
     public ResultSet getIndexInfo(String catalogName, String schemaName, String tableNamePattern, boolean unique,
                                   boolean approximate) throws SQLException {
-        String sql = "SELECT namespace_id, keyspace_id, name, index_key, is_primary FROM system:indexes";
+        String sql = "SELECT namespace_id, keyspace_id, name, index_key, is_primary, `condition` FROM system:indexes";
         if (tableNamePattern != null || schemaName != null || unique) {
             sql += " WHERE";
             List<String> clauses = new ArrayList<>();
@@ -258,13 +258,13 @@ public class CouchbaseMetaData implements DatabaseMetaData {
             Map<String, Object> row = (Map<String, Object>) resultSet.getObject(1);
             List<?> indexKeys = (List<?>) row.get("index_key");
             if (indexKeys == null || indexKeys.size() == 0) {
-                resultRows.add(createIndexInfoCol(row.get("namespace_id"), row.get("keyspace_id"),
-                        row.get("name"), "id", 1, row.get("is_primary")));
+                resultRows.add(createIndexInfoCol(row.get("namespace_id"), row.get("keyspace_id"), row.get("name"),
+                        "id", 1, row.get("is_primary"), row.get("condition")));
             } else {
                 int ordinal = 1;
                 for (Object indexKey : indexKeys) {
-                    resultRows.add(createIndexInfoCol(row.get("namespace_id"), row.get("keyspace_id"),
-                            row.get("name"), indexKey.toString(), ordinal, row.get("is_primary")));
+                    resultRows.add(createIndexInfoCol(row.get("namespace_id"), row.get("keyspace_id"), row.get("name"),
+                            indexKey.toString(), ordinal, row.get("is_primary"), row.get("condition")));
                     ordinal++;
                 }
             }
@@ -273,7 +273,13 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     private static Map<String, Object> createIndexInfoCol(Object namespaceId, Object keyspaceId, Object name,
-                                                          String columnName, int ordinal, Object isPrimary) {
+                                                          String columnName, int ordinal, Object isPrimary,
+                                                          Object filterCondition) {
+        String sortingDirection = "A";
+        if (columnName.endsWith("DESC")) {
+            sortingDirection = "D";
+            columnName = columnName.substring(0, columnName.lastIndexOf("DESC")).trim();
+        }
         Map<String, Object> indexCol = new HashMap<>(13);
         indexCol.put("TABLE_CAT", null);
         indexCol.put("TABLE_SCHEM", namespaceId);
@@ -284,10 +290,10 @@ public class CouchbaseMetaData implements DatabaseMetaData {
         indexCol.put("TYPE", tableIndexHashed);
         indexCol.put("ORDINAL_POSITION", ordinal);
         indexCol.put("COLUMN_NAME", stripBackquotes(columnName));
-        indexCol.put("ASC_OR_DESC", "A");
+        indexCol.put("ASC_OR_DESC", sortingDirection);
         indexCol.put("CARDINALITY", 0);
         indexCol.put("PAGES", 0);
-        indexCol.put("FILTER_CONDITION", null);
+        indexCol.put("FILTER_CONDITION", filterCondition);
         return indexCol;
     }
 
@@ -305,7 +311,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
                 createColumn("ASC_OR_DESC", "string"),
                 createColumn("CARDINALITY", "numeric"),
                 createColumn("PAGES", "numeric"),
-                createColumn("FILTER_CONDITION", "numeric")
+                createColumn("FILTER_CONDITION", "string")
         ));
     }
 
@@ -469,7 +475,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
     }
 
     public String getSearchStringEscape() {
-        return null;
+        return "\\";
     }
 
     public String getExtraNameCharacters() {

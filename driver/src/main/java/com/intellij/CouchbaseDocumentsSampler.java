@@ -13,6 +13,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 import static com.intellij.DriverPropertyInfoHelper.META_SAMPLING_SIZE;
 import static com.intellij.DriverPropertyInfoHelper.META_SAMPLING_SIZE_DEFAULT;
@@ -21,6 +24,7 @@ import static com.intellij.EscapingUtil.wrapInBackquotes;
 
 public class CouchbaseDocumentsSampler {
     private static final String INTRO_QUERY = "SELECT t.* FROM %s t LIMIT %d;";
+    private static final Logger LOG = Logger.getLogger(CouchbaseDocumentsSampler.class.getName());
 
     private final CouchbaseConnection connection;
     private final int sampleSize;
@@ -41,10 +45,9 @@ public class CouchbaseDocumentsSampler {
             try (ResultSet resultSet = statement.executeQuery(sql)) {
                 doIterations(columns, resultSet);
             } catch (CouchbaseException ex) {
-                //todo: maybe ignore all exceptions here
                 List<CouchbaseError.ErrorEntry> entries = CouchbaseError.create(ex).getErrorEntries();
                 if (!(entries.size() == 1 && entries.get(0).getErrorCode().startsWith("13"))) {
-                    throw new SQLException("Keyspace sampling failed.", ex);
+                    LOG.log(Level.WARNING, "Error while sampling bucket: ", ex);
                 }
             }
         }

@@ -5,6 +5,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.msg.manager.GenericManagerResponse;
 import com.couchbase.client.java.Cluster;
@@ -12,10 +13,15 @@ import com.couchbase.client.java.json.JsonObject;
 import com.intellij.resultset.CouchbaseListResultSet;
 import com.intellij.resultset.CouchbaseResultSetMetaData;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
@@ -25,6 +31,7 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
 class DescribeIndexExecutor implements CustomDdlExecutor {
     private static final Pattern DESCRIBE_INDEX_PATTERN = Pattern.compile(
             "^DESCRIBE\\s+INDEXES\\s*;?\\s*", CASE_INSENSITIVE);
+    private static final String ROW_NAME = "description";
 
     @Override
     public boolean mayAccept(String sql) {
@@ -50,9 +57,14 @@ class DescribeIndexExecutor implements CustomDdlExecutor {
             GenericManagerRequest request = new GetIndexDdlRequest(core.context());
             core.send(request);
             GenericManagerResponse response = request.response().get();
-            CouchbaseListResultSet resultSet = new CouchbaseListResultSet(
-                    singletonList(JsonObject.fromJson(response.content()).toMap()));
-            resultSet.setMetadata(new CouchbaseResultSetMetaData(singletonList(createColumn("result", "map"))));
+            List<Map<String, Object>> rows = JsonObject.fromJson(response.content())
+                    .getArray("indexes")
+                    .toList()
+                    .stream()
+                    .map(item -> Collections.singletonMap(ROW_NAME, item))
+                    .collect(Collectors.toList());
+            CouchbaseListResultSet resultSet = new CouchbaseListResultSet(rows);
+            resultSet.setMetadata(new CouchbaseResultSetMetaData(singletonList(createColumn(ROW_NAME, "map"))));
             return resultSet;
         } catch (Exception ex) {
             throw new SQLException(ex);

@@ -18,7 +18,7 @@ class DropBucketExecutor implements CustomDdlExecutor {
         return startsWithIgnoreCase(sql, "DROP BUCKET");
     }
 
-    public boolean execute(Cluster cluster, String sql) {
+    public ExecutionResult execute(Cluster cluster, String sql) {
         Matcher matcher = DROP_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             String name = matcher.group("name");
@@ -26,8 +26,13 @@ class DropBucketExecutor implements CustomDdlExecutor {
                 cluster.buckets().dropBucket(name, DropBucketOptions.dropBucketOptions()
                         .retryStrategy(BestEffortRetryStrategy.INSTANCE));
             }
-            return true;
+            return new ExecutionResult(true);
         }
-        return false;
+        return new ExecutionResult(false);
+    }
+
+    @Override
+    public boolean isRequireWriteAccess() {
+        return true;
     }
 }

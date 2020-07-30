@@ -23,7 +23,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
     protected final Cluster cluster;
     protected final Properties properties;
     protected final boolean isReadOnly;
-    protected CouchbaseReactiveResultSet result;
+    protected ResultSet result;
     private int fetchSize = Queues.SMALL_BUFFER_SIZE;
     private boolean isClosed = false;
 
@@ -40,7 +40,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
     }
 
     @Override
-    public void close() {
+    public void close() throws SQLException {
         if (result != null) {
             result.close();
         }
@@ -63,14 +63,18 @@ public abstract class CouchbaseBaseStatement implements Statement {
         try {
             ReactiveQueryResult result = resultMono.block();
             Objects.requireNonNull(result, "Query did not return result");
-            if (this.result != null) {
-                this.result.close();
-            }
-            this.result = new CouchbaseReactiveResultSet(this, result);
+            setNewResultSet(new CouchbaseReactiveResultSet(this, result));
             return true;
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
+    }
+
+    protected void setNewResultSet(ResultSet resultSet) throws SQLException {
+        if (this.result != null) {
+            this.result.close();
+        }
+        this.result = resultSet;
     }
 
     @Override

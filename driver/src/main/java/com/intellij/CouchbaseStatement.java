@@ -1,7 +1,7 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
-import com.intellij.executor.CouchbaseCustomExecutor;
+import com.intellij.executor.ExecutionResult;
 import com.intellij.resultset.CouchbaseListResultSet;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 
+import static com.intellij.executor.CouchbaseCustomStatementExecutor.tryExecuteDdlStatement;
 import static java.lang.Math.max;
 
 public class CouchbaseStatement extends CouchbaseBaseStatement {
@@ -47,8 +48,11 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     public boolean execute(String sql) throws SQLException {
         checkClosed();
         try {
-            if (CouchbaseCustomExecutor.tryExecuteDdlStatement(cluster, sql, isReadOnly)) {
-                return false;
+            ExecutionResult executionResult = tryExecuteDdlStatement(cluster, sql, isReadOnly);
+            if (executionResult.isSuccess()) {
+                ResultSet resultSet = executionResult.getResultSet();
+                setNewResultSet(resultSet);
+                return resultSet != null;
             }
             return executeInner(cluster.reactive().query(sql, makeQueryOptions()));
         } catch (Throwable t) {

@@ -5,7 +5,7 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
-import com.couchbase.client.java.manager.bucket.*;
+import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions;
 import com.couchbase.client.java.manager.query.WatchQueryIndexesOptions;
 
@@ -38,7 +38,12 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
     }
 
     @Override
-    public boolean execute(Cluster cluster, String sql) {
+    public boolean isRequireWriteAccess() {
+        return true;
+    }
+
+    @Override
+    public ExecutionResult execute(Cluster cluster, String sql) {
         Matcher matcher = CREATE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             String name = matcher.group("name");
@@ -58,9 +63,9 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
                 cluster.queryIndexes().watchIndexes(name, Collections.emptyList(), Duration.ofSeconds(10),
                         WATCH_PRIMARY);
             }
-            return true;
+            return new ExecutionResult(true);
         }
-        return false;
+        return new ExecutionResult(false);
     }
 
     private static BucketSettings createBucketSettings(Matcher matcher, String name) {
@@ -68,7 +73,7 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
         String paramsGroup = matcher.group("params");
         if (!paramsGroup.isEmpty()) {
             String params = paramsGroup.substring(paramsGroup.indexOf("{"), paramsGroup.lastIndexOf("}") + 1);
-            bucketSettings = Mapper.decodeInto(params, CreateBucketSettings.class)
+            bucketSettings = Mapper.decodeInto(params, BucketSettingsDto.class)
                     .injectToBucketSettings(BucketSettings.create(name));
         } else {
             bucketSettings = getDefaultBucketSettings(name);
@@ -79,136 +84,5 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
     private static BucketSettings getDefaultBucketSettings(String name) {
         return BucketSettings.create(name)
                 .numReplicas(0);
-    }
-
-    @SuppressWarnings("unused")
-    private static class CreateBucketSettings {
-        private Boolean flushEnabled;
-        private Long ramQuotaMB;
-        private Integer replicaNumber;
-        private Boolean replicaIndexes;
-        private Integer maxTTL;
-        private CompressionMode compressionMode;
-        private BucketType bucketType;
-        private ConflictResolutionType conflictResolutionType;
-        private EjectionPolicy evictionPolicy;
-
-        BucketSettings injectToBucketSettings(BucketSettings bucketSettings) {
-            if (flushEnabled != null) {
-                bucketSettings.flushEnabled(flushEnabled);
-            }
-            if (ramQuotaMB != null) {
-                bucketSettings.ramQuotaMB(ramQuotaMB);
-            }
-            if (replicaNumber != null) {
-                bucketSettings.numReplicas(replicaNumber);
-            }
-            if (replicaIndexes != null) {
-                bucketSettings.replicaIndexes(replicaIndexes);
-            }
-            if (maxTTL != null) {
-                bucketSettings.maxTTL(maxTTL);
-            }
-            if (compressionMode != null) {
-                bucketSettings.compressionMode(compressionMode);
-            }
-            if (bucketType != null) {
-                bucketSettings.bucketType(bucketType);
-            }
-            if (conflictResolutionType != null) {
-                bucketSettings.conflictResolutionType(conflictResolutionType);
-            }
-            if (evictionPolicy != null) {
-                bucketSettings.ejectionPolicy(evictionPolicy);
-            }
-            return bucketSettings;
-        }
-
-        public Boolean getFlushEnabled() {
-            return flushEnabled;
-        }
-
-        public void setFlushEnabled(Boolean flushEnabled) {
-            this.flushEnabled = flushEnabled;
-        }
-
-        public Long getRamQuotaMB() {
-            return ramQuotaMB;
-        }
-
-        public void setRamQuotaMB(Long ramQuotaMB) {
-            this.ramQuotaMB = ramQuotaMB;
-        }
-
-        public Integer getReplicaNumber() {
-            return replicaNumber;
-        }
-
-        public void setReplicaNumber(Integer replicaNumber) {
-            this.replicaNumber = replicaNumber;
-        }
-
-        public Boolean getReplicaIndexes() {
-            return replicaIndexes;
-        }
-
-        public void setReplicaIndexes(Boolean replicaIndexes) {
-            this.replicaIndexes = replicaIndexes;
-        }
-
-        public Integer getMaxTTL() {
-            return maxTTL;
-        }
-
-        public void setMaxTTL(Integer maxTTL) {
-            this.maxTTL = maxTTL;
-        }
-
-        public CompressionMode getCompressionMode() {
-            return compressionMode;
-        }
-
-        public void setCompressionMode(CompressionMode compressionMode) {
-            this.compressionMode = compressionMode;
-        }
-
-        public BucketType getBucketType() {
-            return bucketType;
-        }
-
-        public void setBucketType(BucketType bucketType) {
-            this.bucketType = bucketType;
-        }
-
-        public ConflictResolutionType getConflictResolutionType() {
-            return conflictResolutionType;
-        }
-
-        public void setConflictResolutionType(ConflictResolutionType conflictResolutionType) {
-            this.conflictResolutionType = conflictResolutionType;
-        }
-
-        public EjectionPolicy getEvictionPolicy() {
-            return evictionPolicy;
-        }
-
-        public void setEvictionPolicy(EjectionPolicy evictionPolicy) {
-            this.evictionPolicy = evictionPolicy;
-        }
-
-        @Override
-        public String toString() {
-            return "CreateBucketSettings{" +
-                    "flushEnabled=" + flushEnabled +
-                    ", ramQuotaMB=" + ramQuotaMB +
-                    ", replicaNumber=" + replicaNumber +
-                    ", replicaIndexes=" + replicaIndexes +
-                    ", maxTTL=" + maxTTL +
-                    ", compressionMode=" + compressionMode +
-                    ", bucketType=" + bucketType +
-                    ", conflictResolutionType=" + conflictResolutionType +
-                    ", evictionPolicy=" + evictionPolicy +
-                    '}';
-        }
     }
 }

@@ -47,6 +47,9 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     public boolean execute(String sql) throws SQLException {
         checkClosed();
         try {
+            if (CouchbaseCustomExecutor.tryExecuteDdlStatement(cluster, sql, isReadOnly)) {
+                return false;
+            }
             return executeInner(cluster.reactive().query(sql, makeQueryOptions()));
         } catch (Throwable t) {
             throw new SQLException(t);

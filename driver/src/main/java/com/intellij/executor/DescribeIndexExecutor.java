@@ -57,6 +57,11 @@ class DescribeIndexExecutor implements CustomDdlExecutor {
             GenericManagerRequest request = new GetIndexDdlRequest(core.context());
             core.send(request);
             GenericManagerResponse response = request.response().get();
+            if (!response.status().equals(ResponseStatus.SUCCESS)) {
+                throw new SQLException("Failed to retrieve index information: "
+                        + "Response status=" + response.status() + " "
+                        + "Response body=" + new String(response.content(), StandardCharsets.UTF_8));
+            }
             List<Map<String, Object>> rows = JsonObject.fromJson(response.content())
                     .getArray("indexes")
                     .toList()

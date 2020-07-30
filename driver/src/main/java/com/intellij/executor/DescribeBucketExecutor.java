@@ -22,7 +22,7 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
             "^DESCRIBE\\s+BUCKET\\s+`(?<name>[0-9a-zA-Z_.%\\-]+)`\\s*;?\\s*", CASE_INSENSITIVE);
     private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE =
             new TypeReference<Map<String, Object>>() {};
-    private static final String ROW_NAME = "description";
+    private static final String ROW_NAME = "result";
 
     @Override
     public boolean mayAccept(String sql) {

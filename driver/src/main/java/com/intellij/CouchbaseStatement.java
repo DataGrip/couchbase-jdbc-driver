@@ -19,7 +19,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     }
 
     @Override
-    public ResultSet executeQuery(String sql) throws SQLException {
+    public ResultSet executeQuery(@NotNull String sql) throws SQLException {
         checkClosed();
         execute(sql);
         if (result == null) {
@@ -28,7 +28,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
         return result;
     }
 
-    CouchbaseListResultSet executeMetaQuery(String sql) throws SQLException {
+    CouchbaseListResultSet executeMetaQuery(@NotNull String sql) throws SQLException {
         checkClosed();
         try {
             return new CouchbaseListResultSet(cluster.query(sql, makeQueryOptions()));
@@ -38,14 +38,14 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     }
 
     @Override
-    public int executeUpdate(String sql) throws SQLException {
+    public int executeUpdate(@NotNull String sql) throws SQLException {
         checkClosed();
         execute(sql);
         return max(0, getUpdateCount());
     }
 
     @Override
-    public boolean execute(String sql) throws SQLException {
+    public boolean execute(@NotNull String sql) throws SQLException {
         checkClosed();
         try {
             ExecutionResult executionResult = tryExecuteDdlStatement(cluster, sql, isReadOnly);

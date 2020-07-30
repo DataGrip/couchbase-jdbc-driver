@@ -70,7 +70,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
         params[idx] = value;
     }
 
-    private static int countPossibleParametersNumber(String sql) {
+    private static int countPossibleParametersNumber(@NotNull String sql) {
         int size = 0;
         for (char character : sql.toCharArray()) {
             if (character == '?') {

@@ -5,6 +5,7 @@ import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.intellij.resultset.CouchbaseReactiveResultSet;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.util.concurrent.Queues;
 
@@ -59,7 +60,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
         return isClosed;
     }
 
-    protected boolean executeInner(Mono<ReactiveQueryResult> resultMono) throws SQLException {
+    protected boolean executeInner(@NotNull Mono<ReactiveQueryResult> resultMono) throws SQLException {
         try {
             ReactiveQueryResult result = resultMono.block();
             Objects.requireNonNull(result, "Query did not return result");
@@ -70,7 +71,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
         }
     }
 
-    protected void setNewResultSet(ResultSet resultSet) throws SQLException {
+    protected void setNewResultSet(@Nullable ResultSet resultSet) throws SQLException {
         if (this.result != null) {
             this.result.close();
         }

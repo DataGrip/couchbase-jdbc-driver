@@ -20,6 +20,7 @@ import java.util.Properties;
 
 import static com.intellij.DriverPropertyInfoHelper.ScanConsistency.getQueryScanConsistency;
 
+@SuppressWarnings("RedundantThrows")
 public abstract class CouchbaseBaseStatement implements Statement {
     protected final Cluster cluster;
     protected final Properties properties;
@@ -56,7 +57,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
     }
 
     @Override
-    public boolean isClosed() {
+    public boolean isClosed() throws SQLException {
         return isClosed;
     }
 
@@ -79,7 +80,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
     }
 
     @Override
-    public boolean getMoreResults() {
+    public boolean getMoreResults() throws SQLException {
         return false;
     }
 
@@ -145,7 +146,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
     }
 
     @Override
-    public void setMaxRows(int max) {
+    public void setMaxRows(int max) throws SQLException {
         // todo
     }
 
@@ -170,12 +171,12 @@ public abstract class CouchbaseBaseStatement implements Statement {
     }
 
     @Override
-    public SQLWarning getWarnings() {
+    public SQLWarning getWarnings() throws SQLException {
         return null; // todo
     }
 
     @Override
-    public void clearWarnings() {
+    public void clearWarnings() throws SQLException {
         // todo
     }
 
@@ -191,12 +192,12 @@ public abstract class CouchbaseBaseStatement implements Statement {
     }
 
     @Override
-    public int getFetchDirection() {
+    public int getFetchDirection() throws SQLException {
         return ResultSet.FETCH_FORWARD;
     }
 
     @Override
-    public void setFetchSize(int rows) {
+    public void setFetchSize(int rows) throws SQLException {
         this.fetchSize = rows;
     }
 

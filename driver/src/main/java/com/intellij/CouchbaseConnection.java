@@ -1,6 +1,7 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
+import com.intellij.executor.CouchbaseCustomStatementExecutor;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Array;
@@ -11,6 +12,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
@@ -92,6 +94,9 @@ public class CouchbaseConnection implements Connection {
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         checkClosed();
         try {
+            if (CouchbaseCustomStatementExecutor.mayExecute(sql)) {
+                return new CouchbaseNoParamsPrepared(sql, new CouchbaseStatement(cluster, properties, isReadOnly));
+            }
             return new CouchbasePreparedStatement(cluster, sql, properties, isReadOnly);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
@@ -195,7 +200,11 @@ public class CouchbaseConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType,
                                               int resultSetConcurrency) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        if (resultSetType != ResultSet.TYPE_FORWARD_ONLY || resultSetConcurrency != ResultSet.CONCUR_READ_ONLY) {
+            throw new SQLFeatureNotSupportedException();
+        }
+        return prepareStatement(sql);
     }
 
     @Override

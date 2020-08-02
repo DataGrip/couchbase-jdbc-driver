@@ -11,6 +11,12 @@ public class CouchbaseCustomStatementExecutor {
             Arrays.asList(new CreateBucketExecutor(), new DropBucketExecutor(), new DescribeBucketExecutor(),
                     new DescribeIndexExecutor());
 
+    public static boolean mayExecute(String sql) {
+        String trimmedSql = sql.trim();
+        return CUSTOM_EXECUTORS.stream()
+                .anyMatch(executor -> executor.mayAccept(trimmedSql));
+    }
+
     public static ExecutionResult tryExecuteDdlStatement(Cluster cluster, String sql, boolean isReadOnly)
             throws SQLException {
         System.out.println("tryExecute: " + sql);

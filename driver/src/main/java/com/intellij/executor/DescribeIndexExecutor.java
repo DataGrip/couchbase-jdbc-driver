@@ -8,10 +8,11 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.msg.manager.GenericManagerResponse;
-import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonObject;
+import com.intellij.CouchbaseConnection;
 import com.intellij.resultset.CouchbaseListResultSet;
 import com.intellij.resultset.CouchbaseResultSetMetaData;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
@@ -34,7 +35,7 @@ class DescribeIndexExecutor implements CustomDdlExecutor {
     private static final String ROW_NAME = "result";
 
     @Override
-    public boolean mayAccept(String sql) {
+    public boolean mayAccept(@NotNull String sql) {
         return startsWithIgnoreCase(sql, "DESCRIBE INDEX");
     }
 
@@ -44,10 +45,10 @@ class DescribeIndexExecutor implements CustomDdlExecutor {
     }
 
     @Override
-    public ExecutionResult execute(Cluster cluster, String sql) throws SQLException {
+    public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException {
         Matcher matcher = DESCRIBE_INDEX_PATTERN.matcher(sql);
         if (matcher.matches()) {
-            return new ExecutionResult(true, doRequest(cluster.core()));
+            return new ExecutionResult(true, doRequest(connection.getCluster().core()));
         }
         return new ExecutionResult(false);
     }

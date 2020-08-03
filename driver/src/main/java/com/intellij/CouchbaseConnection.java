@@ -45,7 +45,7 @@ public class CouchbaseConnection implements Connection {
         return null;
     }
 
-    Cluster getCluster() {
+    public Cluster getCluster() {
         return cluster;
     }
 
@@ -73,7 +73,7 @@ public class CouchbaseConnection implements Connection {
     public CouchbaseStatement createStatement() throws SQLException {
         checkClosed();
         try {
-            return new CouchbaseStatement(cluster, properties, isReadOnly);
+            return new CouchbaseStatement(this);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -95,9 +95,10 @@ public class CouchbaseConnection implements Connection {
         checkClosed();
         try {
             if (CouchbaseCustomStatementExecutor.mayExecute(sql)) {
-                return new CouchbaseNoParamsPrepared(sql, new CouchbaseStatement(cluster, properties, isReadOnly));
+                return new CouchbaseNoParamsPrepared(sql,
+                        new CouchbaseStatement(this));
             }
-            return new CouchbasePreparedStatement(cluster, sql, properties, isReadOnly);
+            return new CouchbasePreparedStatement(this, sql);
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }
@@ -161,8 +162,7 @@ public class CouchbaseConnection implements Connection {
     }
 
     @Override
-    public boolean isReadOnly() throws SQLException {
-        checkClosed();
+    public boolean isReadOnly() {
         return isReadOnly;
     }
 

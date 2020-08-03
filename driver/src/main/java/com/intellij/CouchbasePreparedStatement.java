@@ -1,6 +1,5 @@
 package com.intellij;
 
-import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.query.QueryOptions;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +26,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Properties;
 
 import static com.intellij.DateUtil.Direction;
 import static com.intellij.DateUtil.considerTimeZone;
@@ -37,9 +35,8 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     private final String sql;
     private final Object[] params;
 
-    CouchbasePreparedStatement(@NotNull Cluster cluster, @NotNull String sql, @NotNull Properties properties,
-                               boolean isReadOnly) {
-        super(cluster, properties, isReadOnly);
+    CouchbasePreparedStatement(@NotNull CouchbaseConnection connection, @NotNull String sql) {
+        super(connection);
         this.sql = sql;
         this.params = new Object[countPossibleParametersNumber(sql)];
     }

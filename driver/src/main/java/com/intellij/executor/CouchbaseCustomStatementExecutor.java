@@ -1,6 +1,6 @@
 package com.intellij.executor;
 
-import com.couchbase.client.java.Cluster;
+import com.intellij.CouchbaseConnection;
 
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -17,17 +17,16 @@ public class CouchbaseCustomStatementExecutor {
                 .anyMatch(executor -> executor.mayAccept(trimmedSql));
     }
 
-    public static ExecutionResult tryExecuteDdlStatement(Cluster cluster, String sql, boolean isReadOnly)
+    public static ExecutionResult tryExecuteDdlStatement(CouchbaseConnection connection, String sql)
             throws SQLException {
-        System.out.println("tryExecute: " + sql);
         sql = sql.trim();
         for (CustomDdlExecutor executor : CUSTOM_EXECUTORS) {
             if (executor.mayAccept(sql)) {
-                if (isReadOnly && executor.isRequireWriteAccess()) {
+                if (connection.isReadOnly() && executor.isRequireWriteAccess()) {
                     throw new SQLException(
                             "The server or request is read-only and cannot accept this write statement.");
                 }
-                return executor.execute(cluster, sql);
+                return executor.execute(connection, sql);
             }
         }
         return new ExecutionResult(false);

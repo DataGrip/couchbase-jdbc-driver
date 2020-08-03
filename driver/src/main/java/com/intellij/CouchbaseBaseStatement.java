@@ -25,14 +25,16 @@ public abstract class CouchbaseBaseStatement implements Statement {
     protected final Cluster cluster;
     protected final Properties properties;
     protected final boolean isReadOnly;
+    protected CouchbaseConnection connection;
     protected ResultSet result;
     private int fetchSize = Queues.SMALL_BUFFER_SIZE;
     private boolean isClosed = false;
 
-    CouchbaseBaseStatement(@NotNull Cluster cluster, @NotNull Properties properties, boolean isReadOnly) {
-        this.properties = properties;
-        this.cluster = cluster;
-        this.isReadOnly = isReadOnly;
+    CouchbaseBaseStatement(@NotNull CouchbaseConnection connection) {
+        this.connection = connection;
+        this.properties = connection.getProperties();
+        this.cluster = connection.getCluster();
+        this.isReadOnly = connection.isReadOnly();
     }
 
     protected QueryOptions makeQueryOptions() {
@@ -47,6 +49,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
             result.close();
         }
         result = null;
+        connection = null;
         isClosed = true;
     }
 

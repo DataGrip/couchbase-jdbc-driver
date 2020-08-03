@@ -1,14 +1,14 @@
 package com.intellij.executor;
 
-import com.couchbase.client.java.Cluster;
+import com.intellij.CouchbaseConnection;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
 
 interface CustomDdlExecutor {
-    boolean mayAccept(String sql);
+    boolean mayAccept(@NotNull String sql);
     boolean isRequireWriteAccess();
-    ExecutionResult execute(Cluster cluster, String sql) throws SQLException;
+    ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException;
 
     static boolean startsWithIgnoreCase(@NotNull String str, @NotNull String prefix) {
         int stringLength = str.length();

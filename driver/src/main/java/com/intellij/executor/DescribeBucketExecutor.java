@@ -2,10 +2,11 @@ package com.intellij.executor;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
+import com.intellij.CouchbaseConnection;
 import com.intellij.resultset.CouchbaseListResultSet;
 import com.intellij.resultset.CouchbaseResultSetMetaData;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -25,7 +26,7 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
     private static final String ROW_NAME = "result";
 
     @Override
-    public boolean mayAccept(String sql) {
+    public boolean mayAccept(@NotNull String sql) {
         return startsWithIgnoreCase(sql, "DESCRIBE BUCKET");
     }
 
@@ -35,11 +36,11 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
     }
 
     @Override
-    public ExecutionResult execute(Cluster cluster, String sql) {
+    public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) {
         Matcher matcher = DESCRIBE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             String name = matcher.group("name");
-            BucketSettings bucketSettings = cluster.buckets().getBucket(name);
+            BucketSettings bucketSettings = connection.getCluster().buckets().getBucket(name);
             Map<String, Object> map = Mapper.convertValue(
                     BucketSettingsDto.extractBucketSettings(bucketSettings), MAP_TYPE_REFERENCE);
             CouchbaseListResultSet resultSet = new CouchbaseListResultSet(singletonList(singletonMap(ROW_NAME, map)));
@@ -48,4 +49,5 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
         }
         return new ExecutionResult(false);
     }
+
 }

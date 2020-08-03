@@ -8,6 +8,8 @@ import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions;
 import com.couchbase.client.java.manager.query.WatchQueryIndexesOptions;
+import com.intellij.CouchbaseConnection;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -33,7 +35,7 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
             .watchPrimary(true);
 
     @Override
-    public boolean mayAccept(String sql) {
+    public boolean mayAccept(@NotNull String sql) {
         return startsWithIgnoreCase(sql, "CREATE BUCKET");
     }
 
@@ -43,9 +45,10 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
     }
 
     @Override
-    public ExecutionResult execute(Cluster cluster, String sql) {
+    public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) {
         Matcher matcher = CREATE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
+            Cluster cluster = connection.getCluster();
             String name = matcher.group("name");
             try {
                 BucketSettings bucketSettings = createBucketSettings(matcher, name);

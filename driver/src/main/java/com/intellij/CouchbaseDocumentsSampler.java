@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import static com.intellij.DriverPropertyInfoHelper.META_SAMPLING_SIZE;
@@ -29,7 +28,7 @@ public class CouchbaseDocumentsSampler {
     private final CouchbaseConnection connection;
     private final int sampleSize;
 
-    CouchbaseDocumentsSampler(@NotNull CouchbaseConnection connection) {
+    public CouchbaseDocumentsSampler(@NotNull CouchbaseConnection connection) {
         this.connection = connection;
         int sampleSize = META_SAMPLING_SIZE_DEFAULT;
         try {
@@ -38,7 +37,7 @@ public class CouchbaseDocumentsSampler {
         this.sampleSize = sampleSize;
     }
 
-    public Collection<ColumnInfo> sample(TableInfo table) throws SQLException {
+    public Collection<ColumnInfo> sample(@NotNull TableInfo table) throws SQLException {
         Map<String, ColumnInfo> columns = new HashMap<>();
         String sql = String.format(INTRO_QUERY, qualifyTablePath(table), sampleSize);
         try (CouchbaseStatement statement = connection.createStatement()) {

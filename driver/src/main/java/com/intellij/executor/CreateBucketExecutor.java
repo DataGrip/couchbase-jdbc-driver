@@ -54,8 +54,6 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
             try {
                 BucketSettings bucketSettings = createBucketSettings(matcher, name);
                 cluster.buckets().createBucket(bucketSettings);
-                cluster.waitUntilReady(Duration.ofSeconds(10), OPTIONS);
-                cluster.bucket(name).waitUntilReady(Duration.ofSeconds(10), OPTIONS);
             } catch (BucketExistsException ignore) {
                 // ignore
             }

@@ -1,8 +1,7 @@
 package com.intellij.executor;
 
-import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.manager.bucket.DropBucketOptions;
 import com.intellij.CouchbaseConnection;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,10 +24,9 @@ class DropBucketExecutor implements CustomDdlExecutor {
         if (matcher.matches()) {
             Cluster cluster = connection.getCluster();
             String name = matcher.group("name");
-            if (cluster.buckets().getAllBuckets().containsKey(name)) {
-                cluster.buckets().dropBucket(name, DropBucketOptions.dropBucketOptions()
-                        .retryStrategy(BestEffortRetryStrategy.INSTANCE));
-            }
+            try {
+                cluster.buckets().dropBucket(name);
+            } catch (BucketNotFoundException ignore) { }
             return new ExecutionResult(true);
         }
         return new ExecutionResult(false);

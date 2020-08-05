@@ -20,13 +20,14 @@ import java.util.regex.Pattern;
 
 import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
+import static java.util.regex.Pattern.DOTALL;
 
 public class CreateBucketExecutor implements CustomDdlExecutor {
     private static final Pattern CREATE_BUCKET_PATTERN = Pattern.compile(
             "^CREATE\\s+BUCKET\\s+(?<index>(?:WITH\\s+PRIMARY\\s+INDEX\\s+)?)" +
                     "`(?<name>[0-9a-zA-Z_.%\\-]+)`" +
                     "(?<params>(?:\\s+WITH\\s+\\{.*})?)" +
-                    "\\s*;?\\s*", CASE_INSENSITIVE);
+                    "\\s*;?\\s*", CASE_INSENSITIVE | DOTALL);
     private static final WaitUntilReadyOptions OPTIONS = WaitUntilReadyOptions
             .waitUntilReadyOptions()
             .serviceTypes(new HashSet<>(Arrays.asList(ServiceType.KV, ServiceType.QUERY)));
@@ -76,6 +77,7 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
         String paramsGroup = matcher.group("params");
         if (!paramsGroup.isEmpty()) {
             String params = paramsGroup.substring(paramsGroup.indexOf("{"), paramsGroup.lastIndexOf("}") + 1);
+            params = params.replace("'", "\"");
             bucketSettings = Mapper.decodeInto(params, BucketSettingsDto.class)
                     .injectToBucketSettings(BucketSettings.create(name));
         } else {

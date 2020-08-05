@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 
 public class CouchbaseConnection implements Connection {
+    private static final String DEFAULT_SCHEMA = "default";
     private final Cluster cluster;
     private final CouchbaseJdbcDriver driver;
     private final CouchbaseClientURI uri;
@@ -354,8 +355,8 @@ public class CouchbaseConnection implements Connection {
     }
 
     @Override
-    public String getSchema() throws SQLException {
-        return getCatalog();
+    public String getSchema() {
+        return DEFAULT_SCHEMA;
     }
 
     @Override

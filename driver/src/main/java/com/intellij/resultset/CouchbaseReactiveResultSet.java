@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.intellij.ObjectUtil.tryCast;
@@ -129,55 +130,61 @@ public class CouchbaseReactiveResultSet implements ResultSet {
         throw new SQLException("Result exhausted.");
     }
 
-    private <T> T getAsType(int index, Class<T> clazz, T defaultValue) throws SQLException {
+    private <T extends Number> T getAsNumber(int index, Function<Number, T> getter, T defaultValue)
+            throws SQLException {
         checkClosed();
         checkColumnNumber(index);
         if (currentRowAsMap.size() != 1) {
             throw new SQLException("No such column " + index);
         }
         return currentRowAsMap.values().stream().findFirst()
-                .map(v -> tryCast(v, clazz))
+                .map(v -> {
+                    if (v instanceof Number) {
+                        return getter.apply((Number) v);
+                    }
+                    return null;
+                })
                 .orElse(defaultValue);
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return getAsType(columnIndex, Boolean.class, false);
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        return getAsType(columnIndex, Byte.class, (byte) 0);
+        return getAsNumber(columnIndex, Number::byteValue, (byte) 0);
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        return getAsType(columnIndex, Short.class, (short) 0);
+        return getAsNumber(columnIndex, Number::shortValue, (short) 0);
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        return getAsType(columnIndex, Integer.class, 0);
+        return getAsNumber(columnIndex, Number::intValue, 0);
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        return getAsType(columnIndex, Long.class, 0L);
+        return getAsNumber(columnIndex, Number::longValue, 0L);
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        return getAsType(columnIndex, Float.class, 0f);
+        return getAsNumber(columnIndex, Number::floatValue, 0f);
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        return getAsType(columnIndex, Double.class, 0d);
+        return getAsNumber(columnIndex, Number::doubleValue, 0d);
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return getAsType(columnIndex, BigDecimal.class, null);
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -217,9 +224,7 @@ public class CouchbaseReactiveResultSet implements ResultSet {
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        checkClosed();
-        checkColumnLabel(columnLabel);
-        return getBoolean(1);
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -266,9 +271,7 @@ public class CouchbaseReactiveResultSet implements ResultSet {
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        checkClosed();
-        checkColumnLabel(columnLabel);
-        return getBigDecimal(1);
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

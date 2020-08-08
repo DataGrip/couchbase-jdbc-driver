@@ -1,10 +1,8 @@
 package com.intellij.meta;
 
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Map;
+
+import static com.intellij.ObjectUtil.tryCast;
 
 public class IndexInfo {
     public final String name;
@@ -51,13 +49,5 @@ public class IndexInfo {
                 ", status='" + status + '\'' +
                 ", lastScanTime='" + lastScanTime + '\'' +
                 '}';
-    }
-
-    @Contract(value = "null, _ -> null", pure = true)
-    private static @Nullable <T> T tryCast(@Nullable Object obj, @NotNull Class<T> clazz) {
-        if (clazz.isInstance(obj)) {
-            return clazz.cast(obj);
-        }
-        return null;
     }
 }

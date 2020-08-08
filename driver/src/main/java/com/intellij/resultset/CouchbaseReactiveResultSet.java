@@ -4,7 +4,6 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.intellij.CouchbaseBaseStatement;
 import org.jetbrains.annotations.NotNull;
-import reactor.core.publisher.Mono;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -34,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static com.intellij.ObjectUtil.tryCast;
 import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
 
 public class CouchbaseReactiveResultSet implements ResultSet {
@@ -129,44 +129,55 @@ public class CouchbaseReactiveResultSet implements ResultSet {
         throw new SQLException("Result exhausted.");
     }
 
+    private <T> T getAsType(int index, Class<T> clazz, T defaultValue) throws SQLException {
+        checkClosed();
+        checkColumnNumber(index);
+        if (currentRowAsMap.size() != 1) {
+            throw new SQLException("No such column " + index);
+        }
+        return currentRowAsMap.values().stream().findFirst()
+                .map(v -> tryCast(v, clazz))
+                .orElse(defaultValue);
+    }
+
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, Boolean.class, false);
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, Byte.class, (byte) 0);
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, Short.class, (short) 0);
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, Integer.class, 0);
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, Long.class, 0L);
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, Float.class, 0f);
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, Double.class, 0d);
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getAsType(columnIndex, BigDecimal.class, null);
     }
 
     @Override
@@ -206,42 +217,58 @@ public class CouchbaseReactiveResultSet implements ResultSet {
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getBoolean(1);
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getByte(1);
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getShort(1);
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getInt(1);
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getLong(1);
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getFloat(1);
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getDouble(1);
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        checkClosed();
+        checkColumnLabel(columnLabel);
+        return getBigDecimal(1);
     }
 
     @Override

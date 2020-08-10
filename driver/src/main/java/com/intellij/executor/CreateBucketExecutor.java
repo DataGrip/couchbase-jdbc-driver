@@ -1,7 +1,11 @@
 package com.intellij.executor;
 
-import com.couchbase.client.core.error.*;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.core.error.BucketExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
@@ -12,6 +16,7 @@ import com.intellij.CouchbaseError;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.regex.Matcher;
@@ -32,6 +37,9 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
     private static final WatchQueryIndexesOptions WATCH_PRIMARY = WatchQueryIndexesOptions
             .watchQueryIndexesOptions()
             .watchPrimary(true);
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+    private static final String DEFAULT_INDEX_NAME = "#primary";
 
     @Override
     public boolean mayAccept(@NotNull String sql) {
@@ -44,7 +52,7 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
     }
 
     @Override
-    public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) {
+    public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException {
         Matcher matcher = CREATE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             Cluster cluster = connection.getCluster();
@@ -86,18 +94,21 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
     }
 
     private void waitForIndex(Cluster cluster, String bucketName) {
-        cluster.queryIndexes().watchIndexes(bucketName, Collections.singletonList("#primary"),
+        cluster.queryIndexes().watchIndexes(bucketName, Collections.singletonList(DEFAULT_INDEX_NAME),
                 Duration.ofSeconds(10), WATCH_PRIMARY);
     }
 
-    private static BucketSettings createBucketSettings(Matcher matcher, String name) {
+    private static BucketSettings createBucketSettings(Matcher matcher, String name) throws SQLException {
         BucketSettings bucketSettings = BucketSettings.create(name);
         String paramsGroup = matcher.group("params");
         if (!paramsGroup.isEmpty()) {
             String params = paramsGroup.substring(paramsGroup.indexOf("{"), paramsGroup.lastIndexOf("}") + 1);
-            params = params.replace("'", "\"");
-            Mapper.decodeInto(params, BucketSettingsDto.class)
-                    .injectToBucketSettings(bucketSettings);
+            try {
+                MAPPER.readValue(params, BucketSettingsDto.class)
+                        .injectToBucketSettings(bucketSettings);
+            } catch (JsonProcessingException e) {
+                throw new SQLException("Could not decode from JSON: " + params, e);
+            }
         }
         return bucketSettings;
     }

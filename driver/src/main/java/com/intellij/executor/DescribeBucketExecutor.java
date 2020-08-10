@@ -6,6 +6,7 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.intellij.CouchbaseConnection;
 import com.intellij.CouchbaseDocumentsSampler;
+import com.intellij.EscapingUtil;
 import com.intellij.meta.TableInfo;
 import com.intellij.resultset.CouchbaseListResultSet;
 import com.intellij.resultset.CouchbaseResultSetMetaData;
@@ -27,7 +28,8 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
 public class DescribeBucketExecutor implements CustomDdlExecutor {
     private static final Pattern DESCRIBE_BUCKET_PATTERN = Pattern.compile(
             "^DESCRIBE\\s+BUCKET\\s+(?<type>(?:(COLUMNS|SETTINGS)\\s+)?)" +
-                    "(?<schema>(?:[a-zA-Z]+:)?)`(?<name>[0-9a-zA-Z_.%\\-]+)`\\s*;?\\s*",
+                    "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
+                    "\\s*;?\\s*",
             CASE_INSENSITIVE);
     private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE =
             new TypeReference<Map<String, Object>>() {};
@@ -47,7 +49,7 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
     public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException {
         Matcher matcher = DESCRIBE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
-            String name = matcher.group("name");
+            String name = EscapingUtil.stripBackquotes(matcher.group("name"));
             String type = matcher.group("type").trim();
             if (type.isEmpty() || type.equalsIgnoreCase("SETTINGS")) {
                 return describeSettings(connection.getCluster(), name);

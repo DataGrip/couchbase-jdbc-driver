@@ -6,6 +6,7 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.query.DropPrimaryQueryIndexOptions;
 import com.intellij.CouchbaseConnection;
 import com.intellij.CouchbaseError;
+import com.intellij.EscapingUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
@@ -17,7 +18,9 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 class DropBucketExecutor implements CustomDdlExecutor {
     private static final Pattern DROP_BUCKET_PATTERN = Pattern.compile(
-            "^DROP\\s+BUCKET\\s+`(?<name>[0-9a-zA-Z_.%\\-]+)`\\s*;?\\s*", CASE_INSENSITIVE);
+            "^DROP\\s+BUCKET\\s+" +
+                    "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
+                    "\\s*;?\\s*", CASE_INSENSITIVE);
 
     public boolean mayAccept(@NotNull String sql) {
         return startsWithIgnoreCase(sql, "DROP BUCKET");
@@ -27,7 +30,7 @@ class DropBucketExecutor implements CustomDdlExecutor {
         Matcher matcher = DROP_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             Cluster cluster = connection.getCluster();
-            String name = matcher.group("name");
+            String name = EscapingUtil.stripBackquotes(matcher.group("name"));
             try {
                 try {
                     cluster.queryIndexes().dropPrimaryIndex(name,

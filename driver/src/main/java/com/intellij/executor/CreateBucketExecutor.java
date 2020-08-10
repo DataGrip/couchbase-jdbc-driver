@@ -13,6 +13,7 @@ import com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions;
 import com.couchbase.client.java.manager.query.WatchQueryIndexesOptions;
 import com.intellij.CouchbaseConnection;
 import com.intellij.CouchbaseError;
+import com.intellij.EscapingUtil;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 
@@ -31,7 +32,7 @@ import static java.util.regex.Pattern.DOTALL;
 public class CreateBucketExecutor implements CustomDdlExecutor {
     private static final Pattern CREATE_BUCKET_PATTERN = Pattern.compile(
             "^CREATE\\s+BUCKET\\s+(?<index>(?:WITH\\s+PRIMARY\\s+INDEX\\s+)?)" +
-                    "`(?<name>[0-9a-zA-Z_.%\\-]+)`" +
+                    "(?:default:)?(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
                     "(?<params>(?:\\s+WITH\\s+\\{.*})?)" +
                     "\\s*;?\\s*", CASE_INSENSITIVE | DOTALL);
     private static final WatchQueryIndexesOptions WATCH_PRIMARY = WatchQueryIndexesOptions
@@ -56,7 +57,7 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
         Matcher matcher = CREATE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             Cluster cluster = connection.getCluster();
-            String name = matcher.group("name");
+            String name = EscapingUtil.stripBackquotes(matcher.group("name"));
             try {
                 BucketSettings bucketSettings = createBucketSettings(matcher, name);
                 cluster.buckets().createBucket(bucketSettings);

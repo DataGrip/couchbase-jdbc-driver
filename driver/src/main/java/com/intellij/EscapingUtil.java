@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import reactor.util.annotation.Nullable;
 
-class EscapingUtil {
+public class EscapingUtil {
     private static final String BACKQUOTE = "`";
 
     private EscapingUtil() {

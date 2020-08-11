@@ -9,10 +9,12 @@ import com.intellij.CouchbaseError;
 import com.intellij.EscapingUtil;
 import org.jetbrains.annotations.NotNull;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
 import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
@@ -21,16 +23,21 @@ class DropBucketExecutor implements CustomDdlExecutor {
             "^DROP\\s+BUCKET\\s+" +
                     "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
                     "\\s*;?\\s*", CASE_INSENSITIVE);
+    private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";
 
     public boolean mayAccept(@NotNull String sql) {
         return startsWithIgnoreCase(sql, "DROP BUCKET");
     }
 
-    public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) {
+    public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException {
         Matcher matcher = DROP_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             Cluster cluster = connection.getCluster();
             String name = EscapingUtil.stripBackquotes(matcher.group("name"));
+            String schema = matcher.group("schema");
+            if (SYSTEM_SCHEMA_COLON.equals(schema)) {
+                throw new SQLException("Cannot drop bucket in system schema");
+            }
             try {
                 try {
                     cluster.queryIndexes().dropPrimaryIndex(name,

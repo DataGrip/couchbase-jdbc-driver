@@ -24,6 +24,7 @@ import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
 @SuppressWarnings({"SqlDialectInspection", "SqlNoDataSourceInspection"})
 public class CouchbaseMetaData implements DatabaseMetaData {
 
+    public static final String SYSTEM_SCHEMA = "system";
     private static final String DB_NAME = "Couchbase";
 
     private final CouchbaseConnection connection;

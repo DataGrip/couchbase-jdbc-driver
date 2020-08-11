@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
 import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.DOTALL;
@@ -32,7 +33,7 @@ import static java.util.regex.Pattern.DOTALL;
 public class CreateBucketExecutor implements CustomDdlExecutor {
     private static final Pattern CREATE_BUCKET_PATTERN = Pattern.compile(
             "^CREATE\\s+BUCKET\\s+(?<index>(?:WITH\\s+PRIMARY\\s+INDEX\\s+)?)" +
-                    "(?:default:)?(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
+                    "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
                     "(?<params>(?:\\s+WITH\\s+\\{.*})?)" +
                     "\\s*;?\\s*", CASE_INSENSITIVE | DOTALL);
     private static final WatchQueryIndexesOptions WATCH_PRIMARY = WatchQueryIndexesOptions
@@ -41,6 +42,7 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
     private static final String DEFAULT_INDEX_NAME = "#primary";
+    private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";
 
     @Override
     public boolean mayAccept(@NotNull String sql) {
@@ -58,6 +60,10 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
         if (matcher.matches()) {
             Cluster cluster = connection.getCluster();
             String name = EscapingUtil.stripBackquotes(matcher.group("name"));
+            String schema = matcher.group("schema");
+            if (SYSTEM_SCHEMA_COLON.equals(schema)) {
+                throw new SQLException("Cannot create bucket in system schema");
+            }
             try {
                 BucketSettings bucketSettings = createBucketSettings(matcher, name);
                 cluster.buckets().createBucket(bucketSettings);

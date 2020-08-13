@@ -15,7 +15,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static com.intellij.executor.IndexCommons.getIndexes;
 import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
 import static java.util.Collections.singletonList;
@@ -28,7 +27,7 @@ class DescribeIndexExecutor implements CustomDdlExecutor {
 
     @Override
     public boolean mayAccept(@NotNull String sql) {
-        return startsWithIgnoreCase(sql, "DESCRIBE INDEX");
+        return DESCRIBE_INDEX_PATTERN.matcher(sql).matches();
     }
 
     @Override

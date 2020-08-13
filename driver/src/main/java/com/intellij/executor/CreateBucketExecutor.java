@@ -26,7 +26,6 @@ import java.util.regex.Pattern;
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
-import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.DOTALL;
 
@@ -46,7 +45,7 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
 
     @Override
     public boolean mayAccept(@NotNull String sql) {
-        return startsWithIgnoreCase(sql, "CREATE BUCKET");
+        return CREATE_BUCKET_PATTERN.matcher(sql).matches();
     }
 
     @Override

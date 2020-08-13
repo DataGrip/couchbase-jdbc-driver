@@ -15,7 +15,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
-import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 class DropBucketExecutor implements CustomDdlExecutor {
@@ -26,7 +25,7 @@ class DropBucketExecutor implements CustomDdlExecutor {
     private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";
 
     public boolean mayAccept(@NotNull String sql) {
-        return startsWithIgnoreCase(sql, "DROP BUCKET");
+        return DROP_BUCKET_PATTERN.matcher(sql).matches();
     }
 
     public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException {

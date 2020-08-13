@@ -19,7 +19,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.intellij.executor.CustomDdlExecutor.startsWithIgnoreCase;
 import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
@@ -37,7 +36,7 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
 
     @Override
     public boolean mayAccept(@NotNull String sql) {
-        return startsWithIgnoreCase(sql, "DESCRIBE BUCKET");
+        return DESCRIBE_BUCKET_PATTERN.matcher(sql).matches();
     }
 
     @Override

@@ -32,7 +32,7 @@ import static java.util.regex.Pattern.DOTALL;
 
 public class CreateBucketExecutor implements CustomDdlExecutor {
     private static final Pattern CREATE_BUCKET_PATTERN = Pattern.compile(
-            "^CREATE\\s+BUCKET\\s+(?<index>(?:WITH\\s+PRIMARY\\s+INDEX\\s+)?)" +
+            "^CREATE\\s+(BUCKET|TABLE)\\s+(?<index>(?:WITH\\s+PRIMARY\\s+INDEX\\s+)?)" +
                     "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
                     "(?<params>(?:\\s+WITH\\s+\\{.*})?)" +
                     "\\s*;?\\s*", CASE_INSENSITIVE | DOTALL);

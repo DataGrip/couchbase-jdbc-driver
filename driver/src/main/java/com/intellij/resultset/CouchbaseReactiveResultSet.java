@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static com.intellij.ObjectUtil.tryCast;
 import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
 
 public class CouchbaseReactiveResultSet implements ResultSet {

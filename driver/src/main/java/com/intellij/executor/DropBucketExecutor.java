@@ -20,7 +20,7 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 class DropBucketExecutor implements CustomDdlExecutor {
     private static final Pattern DROP_BUCKET_PATTERN = Pattern.compile(
-            "^DROP\\s+BUCKET\\s+" +
+            "^DROP\\s+(BUCKET|TABLE)\\s+" +
                     "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
                     "\\s*;?\\s*", CASE_INSENSITIVE);
     private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";

@@ -27,7 +27,7 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 public class DescribeBucketExecutor implements CustomDdlExecutor {
     private static final Pattern DESCRIBE_BUCKET_PATTERN = Pattern.compile(
-            "^DESCRIBE\\s+BUCKET\\s+(?<type>(?:(COLUMNS|SETTINGS)\\s+)?)" +
+            "^DESCRIBE\\s+(BUCKET|TABLE)\\s+(?<type>(?:(COLUMNS|SETTINGS)\\s+)?)" +
                     "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_]+))" +
                     "\\s*;?\\s*",
             CASE_INSENSITIVE);

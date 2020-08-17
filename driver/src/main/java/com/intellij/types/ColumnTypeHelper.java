@@ -15,6 +15,8 @@ public class ColumnTypeHelper {
         javaTypeMap.put("array", Types.ARRAY);
         javaTypeMap.put("numeric", Types.NUMERIC);
         javaTypeMap.put("int", Types.INTEGER);
+        javaTypeMap.put("integer", Types.INTEGER);
+        javaTypeMap.put("long", Types.BIGINT);
         javaTypeMap.put("short", Types.INTEGER);
         javaTypeMap.put("boolean", Types.BOOLEAN);
         javaTypeMap.put("string", Types.VARCHAR);
@@ -28,6 +30,8 @@ public class ColumnTypeHelper {
         typeNameMap.put("array", "java.util.List");
         typeNameMap.put("numeric", "java.lang.Long");
         typeNameMap.put("int", "java.lang.Integer");
+        typeNameMap.put("integer", "java.lang.Integer");
+        typeNameMap.put("long", "java.lang.Long");
         typeNameMap.put("short", "java.lang.Short");
         typeNameMap.put("boolean", "java.lang.Boolean");
         typeNameMap.put("string", "java.lang.String");

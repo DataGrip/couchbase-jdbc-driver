@@ -92,7 +92,7 @@ public class CouchbaseDocumentsSampler {
         String typeName = "string";
         if (object == null) {
             typeName = "null";
-        } else if (object instanceof  Map<?, ?>) {
+        } else if (object instanceof Map<?, ?>) {
             typeName = "object";
         } else if (object instanceof List<?>) {
             typeName = "array";
@@ -102,6 +102,10 @@ public class CouchbaseDocumentsSampler {
             typeName = "float";
         } else if (object instanceof Double) {
             typeName = "double";
+        } else if (object instanceof Long) {
+            typeName = "long";
+        } else if (object instanceof Integer) {
+            typeName = "integer";
         } else if (object instanceof Number) {
             typeName = "numeric";
         }

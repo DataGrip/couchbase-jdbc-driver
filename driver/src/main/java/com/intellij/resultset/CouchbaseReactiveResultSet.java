@@ -1,6 +1,8 @@
 package com.intellij.resultset;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryMetaData;
+import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.intellij.CouchbaseBaseStatement;
 import org.jetbrains.annotations.NotNull;
@@ -27,12 +29,10 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
 
@@ -41,8 +41,8 @@ public class CouchbaseReactiveResultSet implements ResultSet {
     private final static String RESULT_COLUMN_NAME = "result";
 
     private final Statement statement;
-    private final Stream<JsonObject> stream;
-    private Iterator<JsonObject> iterator;
+    private final ResultSetRows<JsonObject> rows;
+    private final QueryMetaData queryMetaData;
     private JsonObject currentRow;
     private Map<String, Object> currentRowAsMap;
     private CouchbaseResultSetMetaData meta;
@@ -51,19 +51,20 @@ public class CouchbaseReactiveResultSet implements ResultSet {
     public CouchbaseReactiveResultSet(@NotNull CouchbaseBaseStatement statement,
                                       @NotNull ReactiveQueryResult queryResult) {
         this.statement = statement;
-        this.stream = queryResult.rowsAsObject()
-                .toStream(statement.getFetchSize());
-        this.iterator = stream.iterator();
+        rows = new ReactiveRows(queryResult, statement.getFetchSize());
+        queryMetaData = rows.hasNext() ? null
+                : queryResult.metaData().block();
     }
 
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public long getMutationCount() {
+        if (queryMetaData != null) {
+            QueryMetrics metrics = queryMetaData.metrics().orElse(null);
+            JsonObject signature = queryMetaData.signature().orElse(null);
+            if (signature == null && metrics != null) {
+                return metrics.mutationCount();
+            }
+        }
+        return -1;
     }
 
     @Override
@@ -71,8 +72,8 @@ public class CouchbaseReactiveResultSet implements ResultSet {
         checkClosed();
         currentRow = null;
         currentRowAsMap = null;
-        if (iterator.hasNext()) {
-            currentRow = iterator.next();
+        if (rows.hasNext()) {
+            currentRow = rows.next();
             currentRowAsMap = currentRow == null ? null : currentRow.toMap();
             return true;
         }
@@ -81,10 +82,7 @@ public class CouchbaseReactiveResultSet implements ResultSet {
 
     @Override
     public void close() {
-        if (stream != null) {
-            stream.close();
-            iterator = Collections.emptyIterator();
-        }
+        rows.close();
         isClosed = true;
     }
 
@@ -986,6 +984,16 @@ public class CouchbaseReactiveResultSet implements ResultSet {
 
     @Override
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
+    }
+
+    @Override
+    public <T> T unwrap(Class<T> iface) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
+    }
+
+    @Override
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 }

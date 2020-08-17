@@ -59,12 +59,6 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
     }
 
     @Override
-    public ResultSet getResultSet() throws SQLException {
-        checkClosed();
-        return result;
-    }
-
-    @Override
     public void addBatch(String sql) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }

@@ -29,6 +29,7 @@ public abstract class CouchbaseBaseStatement implements Statement {
     protected ResultSet result;
     private int fetchSize = Queues.SMALL_BUFFER_SIZE;
     private boolean isClosed = false;
+    private int updateCount = -1;
 
     CouchbaseBaseStatement(@NotNull CouchbaseConnection connection) {
         this.connection = connection;
@@ -40,7 +41,8 @@ public abstract class CouchbaseBaseStatement implements Statement {
     protected QueryOptions makeQueryOptions() {
         return QueryOptions.queryOptions()
                 .scanConsistency(getQueryScanConsistency(properties))
-                .readonly(isReadOnly);
+                .readonly(isReadOnly)
+                .metrics(true);
     }
 
     @Override
@@ -66,20 +68,41 @@ public abstract class CouchbaseBaseStatement implements Statement {
 
     protected boolean executeInner(@NotNull Mono<ReactiveQueryResult> resultMono) throws SQLException {
         try {
-            ReactiveQueryResult result = resultMono.block();
-            Objects.requireNonNull(result, "Query did not return result");
-            setNewResultSet(new CouchbaseReactiveResultSet(this, result));
+            CouchbaseReactiveResultSet resultSet = new CouchbaseReactiveResultSet(this,
+                    Objects.requireNonNull(resultMono.block(), "Query did not return result"));
+            long mutationCount = resultSet.getMutationCount();
+            if (mutationCount != -1) {
+                resultSet.close();
+                setNewResultSet(resultSet, mutationCount);
+                return false;
+            }
+            setNewResultSet(resultSet);
             return true;
         } catch (Throwable t) {
-            throw new SQLException(t.getMessage(), t);
+            throw new SQLException(t);
         }
     }
 
     protected void setNewResultSet(@Nullable ResultSet resultSet) throws SQLException {
-        if (this.result != null) {
-            this.result.close();
+        this.setNewResultSet(resultSet, -1);
+    }
+
+    protected void setNewResultSet(@Nullable ResultSet resultSet, long updateCount) throws SQLException {
+        if (result != null) {
+            result.close();
         }
-        this.result = resultSet;
+        result = resultSet;
+        this.updateCount = coalesceInt(updateCount);
+    }
+
+    private int coalesceInt(long value) {
+        if (value < Integer.MIN_VALUE) {
+            return Integer.MIN_VALUE;
+        }
+        if (value > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return (int)value;
     }
 
     @Override
@@ -90,7 +113,15 @@ public abstract class CouchbaseBaseStatement implements Statement {
     @Override
     public int getUpdateCount() throws SQLException {
         checkClosed();
-        return -1;
+        int returnCount = updateCount;
+        updateCount = -1;
+        return returnCount;
+    }
+
+    @Override
+    public ResultSet getResultSet() throws SQLException {
+        checkClosed();
+        return result;
     }
 
     @Override

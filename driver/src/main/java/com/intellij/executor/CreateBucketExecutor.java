@@ -78,12 +78,12 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
                                         .anyMatch(err -> err.getMessage().contains("GSI")))
                                     .isPresent())
                                 .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(3))
-                                .timeout(Duration.ofSeconds(15)))
+                                .timeout(Duration.ofSeconds(60)))
                         .block();
                 Mono.fromRunnable(() -> waitForIndex(cluster, name))
                         .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexNotFoundException.class))
                                 .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(3))
-                                .timeout(Duration.ofSeconds(15)))
+                                .timeout(Duration.ofSeconds(30)))
                         .block();
                 IndexCommons.waitUntilReady(cluster, name, Duration.ofSeconds(60));
             }

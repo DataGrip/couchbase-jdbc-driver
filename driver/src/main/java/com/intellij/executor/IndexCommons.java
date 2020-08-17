@@ -58,17 +58,8 @@ class IndexCommons {
     }
 
     private static void failIfIndexesPresent(Core core, String bucketName) {
-        List<Object> list;
-        try {
-            list = getIndexes(core);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        Map<String, String> matchingIndexes = list.stream()
-                .filter(i -> i instanceof Map<?, ?>)
-                .map(i -> IndexInfo.create((Map<?, ?>) i))
-                .filter(i -> bucketName.equals(i.bucket) && "#primary".equals(i.name))
+        Map<String, String> matchingIndexes = getMatchingIndexInfo(core, bucketName)
+                .stream()
                 .collect(toMap(IndexInfo::getQualified, IndexInfo::getStatus));
 
         if (!matchingIndexes.isEmpty()) {
@@ -78,18 +69,7 @@ class IndexCommons {
 
     private static void failIfIndexesOffline(Core core, String bucketName)
             throws IndexesNotReadyException {
-        List<Object> list;
-        try {
-            list = getIndexes(core);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        List<IndexInfo> matchingIndexes = list.stream()
-                .filter(i -> i instanceof Map<?, ?>)
-                .map(i -> IndexInfo.create((Map<?, ?>) i))
-                .filter(i -> bucketName.equals(i.bucket) && "#primary".equals(i.name))
-                .collect(toList());
-
+        List<IndexInfo> matchingIndexes = getMatchingIndexInfo(core, bucketName);
         if (matchingIndexes.isEmpty()) {
             throw new IndexesNotReadyException(singletonMap("#primary", "notFound"));
         }
@@ -119,6 +99,21 @@ class IndexCommons {
         } catch (Exception ex) {
             throw new SQLException(ex);
         }
+    }
+
+    private static List<IndexInfo> getMatchingIndexInfo(Core core, String bucketName) {
+        List<Object> list;
+        try {
+            list = getIndexes(core);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return list.stream()
+                .filter(i -> i instanceof Map<?, ?>)
+                .map(i -> IndexInfo.create((Map<?, ?>) i))
+                .filter(i -> bucketName.equals(i.bucket) && "#primary".equals(i.name))
+                .collect(toList());
     }
 
     static class GetIndexDdlRequest extends GenericManagerRequest {

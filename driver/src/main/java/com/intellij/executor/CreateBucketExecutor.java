@@ -2,6 +2,7 @@ package com.intellij.executor;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.MapperFeature;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
@@ -40,7 +41,9 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
             .watchPrimary(true);
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
-            .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true)
+            .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+            .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS, true);
     private static final String DEFAULT_INDEX_NAME = "#primary";
     private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";
 

@@ -1,12 +1,9 @@
 package com.intellij.executor;
 
-import com.couchbase.client.java.manager.bucket.BucketSettings;
-import com.couchbase.client.java.manager.bucket.BucketType;
-import com.couchbase.client.java.manager.bucket.CompressionMode;
-import com.couchbase.client.java.manager.bucket.ConflictResolutionType;
-import com.couchbase.client.java.manager.bucket.EjectionPolicy;
+import com.couchbase.client.java.manager.bucket.*;
 
-@SuppressWarnings("unused")
+import java.time.Duration;
+
 class BucketSettingsDto {
     public Boolean flushEnabled;
     public Long ramQuotaMB;
@@ -16,7 +13,7 @@ class BucketSettingsDto {
     public CompressionMode compressionMode;
     public BucketType bucketType;
     public ConflictResolutionType conflictResolutionType;
-    public EjectionPolicy evictionPolicy;
+    public EvictionPolicyType evictionPolicy;
 
     BucketSettings injectToBucketSettings(BucketSettings bucketSettings) {
         if (flushEnabled != null) {
@@ -32,7 +29,7 @@ class BucketSettingsDto {
             bucketSettings.replicaIndexes(replicaIndexes);
         }
         if (maxTTL != null) {
-            bucketSettings.maxTTL(maxTTL);
+            bucketSettings.maxExpiry(Duration.ofSeconds(maxTTL));
         }
         if (compressionMode != null) {
             bucketSettings.compressionMode(compressionMode);
@@ -44,7 +41,7 @@ class BucketSettingsDto {
             bucketSettings.conflictResolutionType(conflictResolutionType);
         }
         if (evictionPolicy != null) {
-            bucketSettings.ejectionPolicy(evictionPolicy);
+            bucketSettings.evictionPolicy(evictionPolicy);
         }
         return bucketSettings;
     }
@@ -55,11 +52,11 @@ class BucketSettingsDto {
         dto.ramQuotaMB = bucketSettings.ramQuotaMB();
         dto.replicaNumber = bucketSettings.numReplicas();
         dto.replicaIndexes = bucketSettings.replicaIndexes();
-        dto.maxTTL = bucketSettings.maxTTL();
+        dto.maxTTL = (int) bucketSettings.maxExpiry().getSeconds();
         dto.compressionMode = bucketSettings.compressionMode();
         dto.bucketType = bucketSettings.bucketType();
         dto.conflictResolutionType = bucketSettings.conflictResolutionType();
-        dto.evictionPolicy = bucketSettings.ejectionPolicy();
+        dto.evictionPolicy = bucketSettings.evictionPolicy();
         return dto;
     }
 

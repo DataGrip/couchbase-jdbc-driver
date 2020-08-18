@@ -39,7 +39,8 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
             .watchQueryIndexesOptions()
             .watchPrimary(true);
     private static final ObjectMapper MAPPER = new ObjectMapper()
-            .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
+            .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     private static final String DEFAULT_INDEX_NAME = "#primary";
     private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";
 

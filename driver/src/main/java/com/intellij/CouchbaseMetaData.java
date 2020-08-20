@@ -1,6 +1,6 @@
 package com.intellij;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.intellij.meta.ClusterInfo;
 import com.intellij.meta.ColumnInfo;
 import com.intellij.meta.TableInfo;
 import com.intellij.resultset.CouchbaseListResultSet;
@@ -12,7 +12,13 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static com.intellij.EscapingUtil.stripBackquotes;
 import static com.intellij.resultset.CouchbaseResultSetMetaData.createColumn;
@@ -29,10 +35,12 @@ public class CouchbaseMetaData implements DatabaseMetaData {
 
     private final CouchbaseConnection connection;
     private final CouchbaseJdbcDriver driver;
+    private final ClusterInfo clusterInfo;
 
     CouchbaseMetaData(@NotNull CouchbaseConnection connection, @NotNull CouchbaseJdbcDriver driver) {
         this.connection = connection;
         this.driver = driver;
+        this.clusterInfo = new ClusterInfo(connection.getCluster());
     }
 
     @Override
@@ -347,7 +355,7 @@ public class CouchbaseMetaData implements DatabaseMetaData {
         return connection.getUri().getUsername();
     }
 
-    public boolean isReadOnly() throws SQLException {
+    public boolean isReadOnly() {
         return connection.isReadOnly();
     }
 
@@ -367,21 +375,32 @@ public class CouchbaseMetaData implements DatabaseMetaData {
         return false;
     }
 
-    public String getDatabaseProductName() {
-        return DB_NAME;
+    public String getDatabaseProductName() throws SQLException {
+        try {
+            Boolean isEnterprise = clusterInfo.getClusterInfo().getBoolean("isEnterprise");
+            if (isEnterprise == null) {
+                return DB_NAME;
+            }
+            return DB_NAME + (isEnterprise ? " Enterprise" : " Community");
+        } catch (SQLException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     public String getDatabaseProductVersion() throws SQLException {
-        List<JsonObject> results = connection.getCluster()
-                .query("SELECT version() FROM system:dual;")
-                .rowsAsObject();
-        if (results.size() == 1) {
-            JsonObject jsonObject = results.get(0);
-            if (jsonObject.containsKey("$1")) {
-                return parseVersion(String.valueOf(jsonObject.get("$1")));
+        try {
+            String versionString = clusterInfo.getClusterInfo().getString("implementationVersion");
+            if (versionString == null) {
+                throw new SQLException("Unable to fetch database version");
             }
+            return parseVersion(versionString);
+        } catch (SQLException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SQLException(e);
         }
-        throw new SQLException("Unable to fetch database version");
     }
 
     private String parseVersion(String version) {

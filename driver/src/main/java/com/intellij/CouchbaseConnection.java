@@ -26,14 +26,14 @@ import java.util.concurrent.Executor;
 
 public class CouchbaseConnection implements Connection {
     private static final String DEFAULT_SCHEMA = "default";
-    private final Cluster cluster;
+    private final ClusterConnection cluster;
     private final CouchbaseJdbcDriver driver;
     private final CouchbaseClientURI uri;
     private final Properties properties;
     private boolean isClosed = false;
     private boolean isReadOnly = false;
 
-    CouchbaseConnection(@NotNull Cluster cluster, @NotNull CouchbaseJdbcDriver couchbaseJdbcDriver,
+    CouchbaseConnection(@NotNull ClusterConnection cluster, @NotNull CouchbaseJdbcDriver couchbaseJdbcDriver,
                         @NotNull CouchbaseClientURI uri, @NotNull Properties properties) {
         this.cluster = cluster;
         this.driver = couchbaseJdbcDriver;
@@ -47,7 +47,7 @@ public class CouchbaseConnection implements Connection {
     }
 
     public Cluster getCluster() {
-        return cluster;
+        return cluster.getCluster();
     }
 
     Properties getProperties() {
@@ -140,7 +140,7 @@ public class CouchbaseConnection implements Connection {
     @Override
     public void close() {
         if (!isClosed) {
-            cluster.disconnect();
+            cluster.close();
         }
         isClosed = true;
     }

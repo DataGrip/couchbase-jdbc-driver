@@ -1,13 +1,15 @@
 package com.intellij;
 
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CertificateAuthenticator;
+import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
+import com.couchbase.client.java.env.ClusterEnvironment;
 
-import java.nio.file.Paths;
-import java.security.KeyStore;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,7 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,12 +26,17 @@ import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL;
 import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL_DEFAULT;
 import static com.intellij.DriverPropertyInfoHelper.PASSWORD;
 import static com.intellij.DriverPropertyInfoHelper.USER;
+import static com.intellij.DriverPropertyInfoHelper.VERIFY_SERVER_CERTIFICATE;
+import static com.intellij.DriverPropertyInfoHelper.VERIFY_SERVER_CERTIFICATE_DEFAULT;
 import static com.intellij.DriverPropertyInfoHelper.isTrue;
 
 class CouchbaseClientURI {
     static final String PREFIX = "jdbc:couchbase:";
+    private static final String HTTP_SCHEMA = "couchbase://";
+    private static final String HTTPS_SCHEMA = "couchbases://";
 
-    private static final Set<String> JDBC_KEYS = new HashSet<>(Arrays.asList(USER, PASSWORD, ENABLE_SSL));
+    private static final Set<String> JDBC_KEYS = new HashSet<>(Arrays.asList(
+            USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE));
 
     private final String connectionString;
     private final String uri;
@@ -38,6 +44,7 @@ class CouchbaseClientURI {
     private final String userName;
     private final String password;
     private final boolean sslEnabled;
+    private final boolean verifyServerCert;
 
     public CouchbaseClientURI(String uri, Properties info) {
         this.uri = uri;
@@ -60,6 +67,8 @@ class CouchbaseClientURI {
         this.userName = getOption(info, options, USER, null);
         this.password = getOption(info, options, PASSWORD, null);
         this.sslEnabled = isTrue(getOption(info, options, ENABLE_SSL, ENABLE_SSL_DEFAULT));
+        this.verifyServerCert = isTrue(getOption(info, options, VERIFY_SERVER_CERTIFICATE,
+                VERIFY_SERVER_CERTIFICATE_DEFAULT));
         this.hosts = serverPart;
         this.connectionString = createConnectionString(serverPart, options);
     }
@@ -79,21 +88,36 @@ class CouchbaseClientURI {
         return value != null ? value : defaultValue;
     }
 
-    Cluster createCluster() throws SQLException {
+    ClusterConnection createClusterConnection() throws SQLException {
         Authenticator authenticator;
+        String connectionStringWithSchema = (sslEnabled ? HTTPS_SCHEMA : HTTP_SCHEMA) + connectionString;
+        ClusterEnvironment.Builder env = ClusterEnvironment.builder()
+                .load(new ConnectionStringPropertyLoader(connectionStringWithSchema));
+
         if (sslEnabled) {
-            String keyStoreType = System.getProperty("javax.net.ssl.keyStoreType", KeyStore.getDefaultType());
-            String keyStorePassword = System.getProperty("javax.net.ssl.keyStorePassword", "");
-            String keyStorePath = System.getProperty("javax.net.ssl.keyStore", "");
-            authenticator = CertificateAuthenticator.fromKeyStore(
-                    Paths.get(keyStorePath), keyStorePassword, Optional.of(keyStoreType));
+            SecurityConfig.Builder securityConfig = SecurityConfig.enableTls(true);
+            if (verifyServerCert) {
+                SslKeyStoreConfig trustStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.TRUST_STORE);
+                env.securityConfig(securityConfig.trustStore(trustStore.getPath(), trustStore.getPassword(),
+                        trustStore.getType()));
+            } else {
+                env.securityConfig(securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
+            }
+            SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
+            authenticator = CertificateAuthenticator.fromKeyStore(keyStore.getPath(), keyStore.getPassword(),
+                    keyStore.getType());
         } else {
             if (userName == null || userName.isEmpty() || password == null) {
                 throw new SQLException("Username or password is not provided");
             }
             authenticator = PasswordAuthenticator.create(userName, password);
         }
-        return Cluster.connect(connectionString, ClusterOptions.clusterOptions(authenticator));
+
+        ClusterEnvironment environment = env.build();
+        Cluster cluster = Cluster.connect(connectionStringWithSchema, ClusterOptions
+                .clusterOptions(authenticator)
+                .environment(environment));
+        return new ClusterConnection(cluster, environment);
     }
 
     private String getLastValue(final Map<String, List<String>> optionsMap, final String key) {

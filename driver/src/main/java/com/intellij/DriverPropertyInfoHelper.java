@@ -15,6 +15,8 @@ import java.util.stream.Stream;
 public class DriverPropertyInfoHelper {
     public static final String ENABLE_SSL = "sslenabled";
     public static final String ENABLE_SSL_DEFAULT = "false";
+    public static final String VERIFY_SERVER_CERTIFICATE = "verifyServerCertificate";
+    public static final String VERIFY_SERVER_CERTIFICATE_DEFAULT = "true";
     private static final String[] BOOL_CHOICES = new String[]{"true", "false"};
 
     public static final String USER = "user";
@@ -28,6 +30,9 @@ public class DriverPropertyInfoHelper {
         ArrayList<DriverPropertyInfo> propInfos = new ArrayList<>();
 
         addPropInfo(propInfos, ENABLE_SSL, ENABLE_SSL_DEFAULT, "Enable ssl.", BOOL_CHOICES);
+        addPropInfo(propInfos, VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT,
+                "Configure a connection that uses SSL but does not verify the identity of the server.",
+                BOOL_CHOICES);
         addPropInfo(propInfos, USER, "", "Username.", null);
         addPropInfo(propInfos, PASSWORD, "", "Password.", null);
         addPropInfo(propInfos, META_SAMPLING_SIZE, Integer.toString(META_SAMPLING_SIZE_DEFAULT),

@@ -38,7 +38,7 @@ public class CouchbaseJdbcDriver implements Driver {
         if (acceptsURL(url)) {
             try {
                 CouchbaseClientURI clientURI = new CouchbaseClientURI(url, info);
-                Cluster cluster = clientURI.createCluster();
+                ClusterConnection cluster = clientURI.createClusterConnection();
                 if (info == null) {
                     info = new Properties();
                 }

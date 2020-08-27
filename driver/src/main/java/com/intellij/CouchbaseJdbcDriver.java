@@ -1,6 +1,5 @@
 package com.intellij;
 
-import com.couchbase.client.java.Cluster;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

@@ -16,10 +16,12 @@ You'll find it in build/libs.
 ## JDBC connection string
 
 ```
-jdbc:couchbase:<host1[:port1],host2[:port2],...>?<property1>=<value>&<property2>=<value>&...
+jdbc:couchbase:<host1[:port1],host2[:port2],...>[/defaultBucket][?<property1>=<value>&<property2>=<value>&...]
 ```
 
 The driver supports a custom Couchbase port mapping, and the specified port should be a key-value service port [11210 by default].
+
+If you are connecting to a pre Couchbase 6.5 cluster, a `defaultBucket` must be specified in order to properly initialize the connection.
 
 Recognized properties are the following:
   * Recognized by the driver itself

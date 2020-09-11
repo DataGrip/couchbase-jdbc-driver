@@ -9,6 +9,8 @@ import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -43,10 +45,11 @@ class CouchbaseClientURI {
     private final String hosts;
     private final String userName;
     private final String password;
+    private final String defaultBucket;
     private final boolean sslEnabled;
     private final boolean verifyServerCert;
 
-    public CouchbaseClientURI(String uri, Properties info) {
+    public CouchbaseClientURI(@NotNull String uri, @Nullable Properties info) {
         this.uri = uri;
         if (!uri.startsWith(PREFIX)) {
             throw new IllegalArgumentException("URI needs to start with " + PREFIX);
@@ -55,13 +58,20 @@ class CouchbaseClientURI {
         String trimmedUri = uri.substring(PREFIX.length());
         Map<String, List<String>> options = null;
         String serverPart;
+        String nsPart = null;
 
         int optionsStartIndex = trimmedUri.indexOf("?");
-        if (optionsStartIndex < 0) {
-            serverPart = trimmedUri;
-        } else {
+        if (optionsStartIndex >= 0) {
             serverPart = trimmedUri.substring(0, optionsStartIndex);
             options = parseOptions(trimmedUri.substring(optionsStartIndex + 1));
+        } else {
+            serverPart = trimmedUri;
+        }
+
+        int lastSlashIndex = serverPart.lastIndexOf("/");
+        if (lastSlashIndex >= 0) {
+            nsPart = serverPart.substring(lastSlashIndex + 1);
+            serverPart = serverPart.substring(0, lastSlashIndex);
         }
 
         this.userName = getOption(info, options, USER, null);
@@ -70,6 +80,7 @@ class CouchbaseClientURI {
         this.verifyServerCert = isTrue(getOption(info, options, VERIFY_SERVER_CERTIFICATE,
                 VERIFY_SERVER_CERTIFICATE_DEFAULT));
         this.hosts = serverPart;
+        this.defaultBucket = nsPart;
         this.connectionString = createConnectionString(serverPart, options);
     }
 
@@ -77,7 +88,9 @@ class CouchbaseClientURI {
      * @return option from properties or from uri if it is not found in properties.
      * null if options was not found.
      */
-    private String getOption(Properties properties, Map<String, List<String>> options, String optionName, String defaultValue) {
+    @Nullable
+    private String getOption(@Nullable Properties properties, @Nullable Map<String, List<String>> options,
+                             @NotNull String optionName, @Nullable String defaultValue) {
         if (properties != null) {
             String option = (String) properties.get(optionName);
             if (option != null) {
@@ -89,45 +102,51 @@ class CouchbaseClientURI {
     }
 
     ClusterConnection createClusterConnection() throws SQLException {
-        Authenticator authenticator;
         String connectionStringWithSchema = (sslEnabled ? HTTPS_SCHEMA : HTTP_SCHEMA) + connectionString;
-        ClusterEnvironment.Builder env = ClusterEnvironment.builder()
+        ClusterEnvironment.Builder builder = ClusterEnvironment.builder()
                 .load(new ConnectionStringPropertyLoader(connectionStringWithSchema));
+        Authenticator authenticator = authenticate(builder);
+        ClusterEnvironment environment = builder.build();
+        ClusterConnection clusterConnection = new ClusterConnection(
+                Cluster.connect(connectionStringWithSchema, ClusterOptions
+                    .clusterOptions(authenticator)
+                    .environment(environment)
+                ), environment);
+        clusterConnection.initConnection(defaultBucket);
+        return clusterConnection;
+    }
 
+    private Authenticator authenticate(ClusterEnvironment.Builder envBuilder) throws SQLException {
         if (sslEnabled) {
             SecurityConfig.Builder securityConfig = SecurityConfig.enableTls(true);
             if (verifyServerCert) {
                 SslKeyStoreConfig trustStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.TRUST_STORE);
-                env.securityConfig(securityConfig.trustStore(trustStore.getPath(), trustStore.getPassword(),
+                envBuilder.securityConfig(securityConfig.trustStore(trustStore.getPath(), trustStore.getPassword(),
                         trustStore.getType()));
             } else {
-                env.securityConfig(securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
+                envBuilder.securityConfig(securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
             }
             SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
-            authenticator = CertificateAuthenticator.fromKeyStore(keyStore.getPath(), keyStore.getPassword(),
-                    keyStore.getType());
+            return CertificateAuthenticator.fromKeyStore(
+                    keyStore.getPath(), keyStore.getPassword(), keyStore.getType());
         } else {
             if (userName == null || userName.isEmpty() || password == null) {
                 throw new SQLException("Username or password is not provided");
             }
-            authenticator = PasswordAuthenticator.create(userName, password);
+            return PasswordAuthenticator.create(userName, password);
         }
-
-        ClusterEnvironment environment = env.build();
-        Cluster cluster = Cluster.connect(connectionStringWithSchema, ClusterOptions
-                .clusterOptions(authenticator)
-                .environment(environment));
-        return new ClusterConnection(cluster, environment);
     }
 
-    private String getLastValue(final Map<String, List<String>> optionsMap, final String key) {
+    @Nullable
+    private String getLastValue(@Nullable Map<String, List<String>> optionsMap, @NotNull String key) {
         if (optionsMap == null) return null;
         List<String> valueList = optionsMap.get(key);
         if (valueList == null || valueList.size() == 0) return null;
         return valueList.get(valueList.size() - 1);
     }
 
-    private Map<String, List<String>> parseOptions(String optionsPart) {
+    @NotNull
+    private Map<String, List<String>> parseOptions(@NotNull String optionsPart) {
         Map<String, List<String>> optionsMap = new HashMap<>();
 
         for (String _part : optionsPart.split("&")) {
@@ -147,7 +166,8 @@ class CouchbaseClientURI {
         return optionsMap;
     }
 
-    private String createConnectionString(String hosts, Map<String, List<String>> optionsMap) {
+    @NotNull
+    private String createConnectionString(@NotNull String hosts, @Nullable Map<String, List<String>> optionsMap) {
         if (optionsMap == null) {
             return hosts;
         }
@@ -211,6 +231,15 @@ class CouchbaseClientURI {
      */
     public String getURI() {
         return uri;
+    }
+
+    /**
+     * Gets the default bucket
+     *
+     * @return the default bucket
+     */
+    public String getDefaultBucket() {
+        return defaultBucket;
     }
 
     @Override

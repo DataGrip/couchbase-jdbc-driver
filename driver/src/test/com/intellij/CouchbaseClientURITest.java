@@ -72,7 +72,7 @@ public class CouchbaseClientURITest {
         Properties properties = new Properties();
         properties.put("sslenabled", "true");
         CouchbaseClientURI uri = new CouchbaseClientURI(
-                "jdbc:couchbase:localhost:9042/?name=cassandra&password=cassandra",
+                "jdbc:couchbase:localhost:9042?name=cassandra&password=cassandra",
                 properties);
         assertTrue(uri.getSslEnabled());
     }
@@ -82,7 +82,7 @@ public class CouchbaseClientURITest {
         Properties properties = new Properties();
         properties.put("sslenabled", "false");
         CouchbaseClientURI uri = new CouchbaseClientURI(
-                "jdbc:couchbase:localhost:9042/?name=cassandra&password=cassandra",
+                "jdbc:couchbase:localhost:9042?name=cassandra&password=cassandra",
                 properties);
         assertFalse(uri.getSslEnabled());
     }
@@ -91,8 +91,27 @@ public class CouchbaseClientURITest {
     public void testNullSslEnabledOptionFalse() {
         Properties properties = new Properties();
         CouchbaseClientURI uri = new CouchbaseClientURI(
-                "jdbc:couchbase:localhost:9042/?name=cassandra&password=cassandra",
+                "jdbc:couchbase:localhost:9042?name=cassandra&password=cassandra",
                 properties);
         assertFalse(uri.getSslEnabled());
+    }
+
+    @Test
+    public void testDefaultBucket() {
+        Properties properties = new Properties();
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+                "jdbc:couchbase:localhost:9042/default",
+                properties);
+        assertEquals("default", uri.getDefaultBucket());
+    }
+
+    @Test
+    public void testDefaultBucketWithOptions() {
+        Properties properties = new Properties();
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+                "jdbc:couchbase:localhost:9042/default?kv.timeout=123s&retry=exponential",
+                properties);
+        assertEquals("default", uri.getDefaultBucket());
+        assertEquals("localhost:9042?kv.timeout=123s&retry=exponential", uri.getConnectionString());
     }
 }

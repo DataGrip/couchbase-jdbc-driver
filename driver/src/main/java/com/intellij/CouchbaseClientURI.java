@@ -20,7 +20,7 @@ class CouchbaseClientURI {
     private static final String HTTPS_SCHEMA = "couchbases://";
 
     private static final Set<String> JDBC_KEYS = new HashSet<>(ContainerUtil.map(
-        Arrays.asList(USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE),
+        Arrays.asList(USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE, DEFAULT_BUCKET),
         key -> key.toLowerCase(Locale.ENGLISH)));
 
     private final String connectionString;
@@ -63,7 +63,7 @@ class CouchbaseClientURI {
         this.verifyServerCert = isTrue(getOption(info, options, VERIFY_SERVER_CERTIFICATE,
                 VERIFY_SERVER_CERTIFICATE_DEFAULT));
         this.hosts = serverPart;
-        this.defaultBucket = nsPart;
+        this.defaultBucket = nsPart != null && !nsPart.isEmpty() ? nsPart : getOption(info, options, DEFAULT_BUCKET, null);
         this.connectionString = createConnectionString(serverPart, options);
     }
 

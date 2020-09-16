@@ -125,4 +125,25 @@ public class CouchbaseClientURITest {
         assertEquals("default", uri.getDefaultBucket());
         assertEquals("localhost:9042?kv.timeout=123s&retry=exponential", uri.getConnectionString());
     }
+
+    @Test
+    public void testDefaultBucketInProperties() {
+        Properties properties = new Properties();
+        properties.put("defaultBucket", "default");
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+            "jdbc:couchbase:localhost:9042",
+            properties);
+        assertEquals("default", uri.getDefaultBucket());
+        assertEquals("localhost:9042", uri.getConnectionString());
+    }
+
+    @Test
+    public void testDefaultBucketInUrlParameters() {
+        Properties properties = new Properties();
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+            "jdbc:couchbase:localhost:9042?defaultBucket=default",
+            properties);
+        assertEquals("default", uri.getDefaultBucket());
+        assertEquals("localhost:9042?", uri.getConnectionString());
+    }
 }

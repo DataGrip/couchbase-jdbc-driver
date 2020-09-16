@@ -25,10 +25,13 @@ public class DriverPropertyInfoHelper {
     public static final String META_SAMPLING_SIZE = "meta.sampling.size";
     public static final int META_SAMPLING_SIZE_DEFAULT = 1000;
 
+    public static final String DEFAULT_BUCKET = "defaultBucket";
+
 
     public static DriverPropertyInfo[] getPropertyInfo() {
         ArrayList<DriverPropertyInfo> propInfos = new ArrayList<>();
 
+        addPropInfo(propInfos, DEFAULT_BUCKET, "", "If you are connecting to a pre Couchbase 6.5 cluster, a default bucket must be specified in order to properly initialize the connection.", null);
         addPropInfo(propInfos, ENABLE_SSL, ENABLE_SSL_DEFAULT, "Enable ssl.", BOOL_CHOICES);
         addPropInfo(propInfos, VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT,
                 "Configure a connection that uses SSL but does not verify the identity of the server.",

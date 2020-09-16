@@ -88,6 +88,17 @@ public class CouchbaseClientURITest {
     }
 
     @Test
+    public void testVerifyServerCertificateOptionFalse() {
+        Properties properties = new Properties();
+        properties.put("sslenabled", "true");
+        CouchbaseClientURI uri = new CouchbaseClientURI(
+            "jdbc:couchbase:localhost:9042?verifyServerCertificate=false",
+            properties);
+        assertFalse(uri.getVerifyServerCertificate());
+        assertEquals("localhost:9042?", uri.getConnectionString());
+    }
+
+    @Test
     public void testNullSslEnabledOptionFalse() {
         Properties properties = new Properties();
         CouchbaseClientURI uri = new CouchbaseClientURI(

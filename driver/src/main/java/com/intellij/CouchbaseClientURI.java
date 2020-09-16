@@ -1,11 +1,7 @@
 package com.intellij;
 
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.env.CertificateAuthenticator;
-import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
-import com.couchbase.client.core.env.PasswordAuthenticator;
-import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.env.*;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -13,32 +9,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL;
-import static com.intellij.DriverPropertyInfoHelper.ENABLE_SSL_DEFAULT;
-import static com.intellij.DriverPropertyInfoHelper.PASSWORD;
-import static com.intellij.DriverPropertyInfoHelper.USER;
-import static com.intellij.DriverPropertyInfoHelper.VERIFY_SERVER_CERTIFICATE;
-import static com.intellij.DriverPropertyInfoHelper.VERIFY_SERVER_CERTIFICATE_DEFAULT;
-import static com.intellij.DriverPropertyInfoHelper.isTrue;
+import static com.intellij.DriverPropertyInfoHelper.*;
 
 class CouchbaseClientURI {
     static final String PREFIX = "jdbc:couchbase:";
     private static final String HTTP_SCHEMA = "couchbase://";
     private static final String HTTPS_SCHEMA = "couchbases://";
 
-    private static final Set<String> JDBC_KEYS = new HashSet<>(Arrays.asList(
-            USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE));
+    private static final Set<String> JDBC_KEYS = new HashSet<>(ContainerUtil.map(
+        Arrays.asList(USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE),
+        key -> key.toLowerCase(Locale.ENGLISH)));
 
     private final String connectionString;
     private final String uri;
@@ -140,7 +123,8 @@ class CouchbaseClientURI {
     @Nullable
     private String getLastValue(@Nullable Map<String, List<String>> optionsMap, @NotNull String key) {
         if (optionsMap == null) return null;
-        List<String> valueList = optionsMap.get(key);
+        String normalizedKey = key.toLowerCase(Locale.ENGLISH);
+        List<String> valueList = optionsMap.get(normalizedKey);
         if (valueList == null || valueList.size() == 0) return null;
         return valueList.get(valueList.size() - 1);
     }
@@ -204,6 +188,13 @@ class CouchbaseClientURI {
      */
     public Boolean getSslEnabled() {
         return sslEnabled;
+    }
+
+    /**
+     * @return verifyServerCertificate property
+     */
+    public Boolean getVerifyServerCertificate() {
+        return verifyServerCert;
     }
 
     /**

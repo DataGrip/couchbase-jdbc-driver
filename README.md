@@ -30,6 +30,7 @@ Recognized properties are the following:
       * `sslenabled=true/false`
       * `meta.sampling.size=<integer>` specifies a number of documents fetched in order to infer a database schema
       * `query.scan.consistency=not_bounded/request_plus` specifies a query scan consistency (RYW consistency) [default value is `not_bounded`]
+      * `loggingLevel` [default value is `severe`]
   * Propagated to a Couchbase cluster
       * The full list of recognized parameters is documented in the Couchbase [Client-Settings Documentation](https://docs.couchbase.com/java-sdk/current/ref/client-settings.html).
       Any client setting with a system property name may also be specified as a connection string parameter (without the com.couchbase.env. prefix).

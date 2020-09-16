@@ -10,6 +10,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.util.*;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static com.intellij.DriverPropertyInfoHelper.*;
@@ -57,6 +61,8 @@ class CouchbaseClientURI {
             serverPart = serverPart.substring(0, lastSlashIndex);
         }
 
+        setLoggingLevel(info, options);
+
         this.userName = getOption(info, options, USER, null);
         this.password = getOption(info, options, PASSWORD, null);
         this.sslEnabled = isTrue(getOption(info, options, ENABLE_SSL, ENABLE_SSL_DEFAULT));
@@ -65,6 +71,26 @@ class CouchbaseClientURI {
         this.hosts = serverPart;
         this.defaultBucket = nsPart != null && !nsPart.isEmpty() ? nsPart : getOption(info, options, DEFAULT_BUCKET, null);
         this.connectionString = createConnectionString(serverPart, options);
+    }
+
+    private void setLoggingLevel(Properties info, Map<String, List<String>> options) {
+        Logger logger = Logger.getLogger("com.couchbase.client");
+        String logLevel = getOption(info, options, LOGGING_LEVEL, LOGGING_LEVEL_DEFAULT);
+        if (logLevel == null) return;
+        Level level;
+        try {
+            level = Level.parse(logLevel.toUpperCase(Locale.ENGLISH));
+        }
+        catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            return;
+        }
+        logger.setLevel(level);
+        for (Handler h : logger.getParent().getHandlers()) {
+            if (h instanceof ConsoleHandler) {
+                h.setLevel(level);
+            }
+        }
     }
 
     /**

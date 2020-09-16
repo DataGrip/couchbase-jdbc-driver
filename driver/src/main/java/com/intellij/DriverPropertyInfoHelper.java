@@ -27,6 +27,10 @@ public class DriverPropertyInfoHelper {
 
     public static final String DEFAULT_BUCKET = "defaultBucket";
 
+    public static final String LOGGING_LEVEL = "loggingLevel";
+    public static final String LOGGING_LEVEL_DEFAULT = "severe";
+    private static final String[] LOGGING_LEVEL_CHOICES = new String[]{"off", "severe", "warning", "info", "fine", "all"};
+
 
     public static DriverPropertyInfo[] getPropertyInfo() {
         ArrayList<DriverPropertyInfo> propInfos = new ArrayList<>();
@@ -45,6 +49,8 @@ public class DriverPropertyInfoHelper {
                 ScanConsistency.QUERY_SCAN_CONSISTENCY_DEFAULT.toString(),
                 "Query scan consistency.",
                 ScanConsistency.CHOICES);
+
+        addPropInfo(propInfos, LOGGING_LEVEL, LOGGING_LEVEL_DEFAULT, "", LOGGING_LEVEL_CHOICES);
 
         return propInfos.toArray(new DriverPropertyInfo[0]);
     }

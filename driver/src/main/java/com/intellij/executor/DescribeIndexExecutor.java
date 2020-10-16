@@ -22,7 +22,7 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 class DescribeIndexExecutor implements CustomDdlExecutor {
     private static final Pattern DESCRIBE_INDEX_PATTERN = Pattern.compile(
-            "^DESCRIBE\\s+INDEXES\\s*;?\\s*", CASE_INSENSITIVE);
+            "DESCRIBE\\s+INDEXES", CASE_INSENSITIVE);
     private static final String ROW_NAME = "result";
 
     @Override

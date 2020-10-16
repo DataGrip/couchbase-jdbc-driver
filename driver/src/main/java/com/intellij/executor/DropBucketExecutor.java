@@ -14,15 +14,11 @@ import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 class DropBucketExecutor implements CustomDdlExecutor {
     private static final Pattern DROP_BUCKET_PATTERN = Pattern.compile(
-            "^DROP\\s+(BUCKET|TABLE)\\s+" +
-                    "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_][a-zA-Z_\\d]*))" +
-                    "\\s*;?\\s*", CASE_INSENSITIVE);
-    private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";
+        "DROP\\s+(BUCKET|TABLE)\\s+" + BUCKET_NAME, CASE_INSENSITIVE);
 
     public boolean mayAccept(@NotNull String sql) {
         return DROP_BUCKET_PATTERN.matcher(sql).matches();

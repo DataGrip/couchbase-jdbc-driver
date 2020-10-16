@@ -26,26 +26,23 @@ import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
-import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.DOTALL;
 
 public class CreateBucketExecutor implements CustomDdlExecutor {
     private static final Pattern CREATE_BUCKET_PATTERN = Pattern.compile(
-            "^CREATE\\s+(BUCKET|TABLE)\\s+(?<index>(?:WITH\\s+PRIMARY\\s+INDEX\\s+)?)" +
-                    "(?<schema>(?:[a-zA-Z]+:)?)(?<name>(?:`[0-9a-zA-Z_.%\\-]+`)|(?:[a-zA-Z_][a-zA-Z_\\d]*))" +
-                    "(?<params>(?:\\s+WITH\\s+\\{.*})?)" +
-                    "\\s*;?\\s*", CASE_INSENSITIVE | DOTALL);
+        "CREATE\\s+(BUCKET|TABLE)\\s+(?<index>(?:WITH\\s+PRIMARY\\s+INDEX\\s+)?)" +
+            BUCKET_NAME +
+            "(?<params>(?:\\s+WITH\\s+\\{.*})?)", CASE_INSENSITIVE | DOTALL);
     private static final WatchQueryIndexesOptions WATCH_PRIMARY = WatchQueryIndexesOptions
-            .watchQueryIndexesOptions()
-            .watchPrimary(true);
+        .watchQueryIndexesOptions()
+        .watchPrimary(true);
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
             .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true)
             .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
             .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS, true);
     private static final String DEFAULT_INDEX_NAME = "#primary";
-    private static final String SYSTEM_SCHEMA_COLON = SYSTEM_SCHEMA + ":";
 
     @Override
     public boolean mayAccept(@NotNull String sql) {

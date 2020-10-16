@@ -1,6 +1,7 @@
 package com.intellij.executor;
 
 import com.intellij.CouchbaseConnection;
+import com.intellij.StringUtil;
 
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -12,14 +13,18 @@ public class CouchbaseCustomStatementExecutor {
                     new DescribeIndexExecutor());
 
     public static boolean mayExecute(String sql) {
-        String trimmedSql = sql.trim();
+        String trimmedSql = trim(sql);
         return CUSTOM_EXECUTORS.stream()
                 .anyMatch(executor -> executor.mayAccept(trimmedSql));
     }
 
+    private static String trim(String sql) {
+        return StringUtil.trimEnd(sql.trim(), ';').trim();
+    }
+
     public static ExecutionResult tryExecuteDdlStatement(CouchbaseConnection connection, String sql)
             throws SQLException {
-        sql = sql.trim();
+        sql = trim(sql);
         for (CustomDdlExecutor executor : CUSTOM_EXECUTORS) {
             if (executor.mayAccept(sql)) {
                 if (connection.isReadOnly() && executor.isRequireWriteAccess()) {

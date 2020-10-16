@@ -10,7 +10,7 @@ import java.util.List;
 public class CouchbaseCustomStatementExecutor {
     private static final List<CustomDdlExecutor> CUSTOM_EXECUTORS =
             Arrays.asList(new CreateBucketExecutor(), new DropBucketExecutor(), new DescribeBucketExecutor(),
-                    new DescribeIndexExecutor());
+                    new DescribeIndexExecutor(), new GetBucketKeysExecutor());
 
     public static boolean mayExecute(String sql) {
         String trimmedSql = trim(sql);

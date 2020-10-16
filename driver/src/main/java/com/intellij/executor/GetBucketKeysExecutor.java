@@ -48,7 +48,7 @@ class GetBucketKeysExecutor implements CustomDdlExecutor {
         if (name == null) throw new SQLException("Bucket name is not specified");
         String schema = matcher.group("schema");
         if (SYSTEM_SCHEMA_COLON.equals(schema)) {
-            throw new SQLException("Cannot create bucket in system schema");
+            throw new SQLException("Cannot get keys from bucket in system schema");
         }
         String limit = matcher.group("limit");
         String offset = matcher.group("offset");

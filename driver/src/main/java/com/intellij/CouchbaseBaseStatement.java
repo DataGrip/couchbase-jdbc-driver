@@ -1,20 +1,19 @@
 package com.intellij;
 
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.intellij.resultset.CouchbaseReactiveResultSet;
+import com.intellij.resultset.CouchbaseSimpleResultSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.util.concurrent.Queues;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.sql.SQLWarning;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -66,21 +65,33 @@ public abstract class CouchbaseBaseStatement implements Statement {
         return isClosed;
     }
 
-    protected boolean executeInner(@NotNull Mono<ReactiveQueryResult> resultMono) throws SQLException {
+    protected boolean executeInner(@NotNull String sql, @NotNull Mono<ReactiveQueryResult> resultMono) throws SQLException {
         try {
-            CouchbaseReactiveResultSet resultSet = new CouchbaseReactiveResultSet(this,
-                    Objects.requireNonNull(resultMono.block(), "Query did not return result"));
-            long mutationCount = resultSet.getMutationCount();
-            if (mutationCount != -1) {
-                resultSet.close();
-                setNewResultSet(resultSet, mutationCount);
-                return false;
+            ReactiveQueryResult result = Objects.requireNonNull(resultMono.block(), "Query did not return result");
+            ResultSet resultSet;
+            if (sql.toLowerCase(Locale.ENGLISH).startsWith("infer")) resultSet = listResultSet(result);
+            else {
+                resultSet = new CouchbaseReactiveResultSet(this, result);
+                long mutationCount = ((CouchbaseReactiveResultSet) resultSet).getMutationCount();
+                if (mutationCount != -1) {
+                    resultSet.close();
+                    setNewResultSet(resultSet, mutationCount);
+                    return false;
+                }
             }
             setNewResultSet(resultSet);
             return true;
         } catch (Throwable t) {
             throw new SQLException(t);
         }
+    }
+
+    @Nullable
+    private ResultSet listResultSet(@NotNull ReactiveQueryResult result) {
+        List<Object> list = result.rowsAs(JsonArray.class)
+            .map(JsonArray::toList)
+            .blockFirst();
+        return list == null ? null : new CouchbaseSimpleResultSet(list);
     }
 
     protected void setNewResultSet(@Nullable ResultSet resultSet) throws SQLException {

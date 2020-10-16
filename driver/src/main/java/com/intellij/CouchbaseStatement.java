@@ -52,7 +52,7 @@ public class CouchbaseStatement extends CouchbaseBaseStatement {
                 setNewResultSet(resultSet);
                 return resultSet != null;
             }
-            return executeInner(cluster.reactive().query(sql, makeQueryOptions()));
+            return executeInner(sql, cluster.reactive().query(sql, makeQueryOptions()));
         } catch (Throwable t) {
             throw new SQLException(t);
         }

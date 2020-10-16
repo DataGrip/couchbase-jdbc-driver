@@ -98,7 +98,7 @@ public class CouchbasePreparedStatement extends CouchbaseBaseStatement implement
     public boolean execute() throws SQLException {
         checkClosed();
         try {
-            return executeInner(cluster.reactive().query(sql, bindParameters()));
+            return executeInner(sql, cluster.reactive().query(sql, bindParameters()));
         } catch (Throwable t) {
             throw new SQLException(t.getMessage(), t);
         }

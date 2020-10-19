@@ -1,5 +1,6 @@
 package com.intellij.executor;
 
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -56,9 +57,8 @@ class GetBucketKeysExecutor implements CustomDdlExecutor {
         if (limit != null) url += "&limit=" + limit;
         if (offset != null) url += "&skip=" + offset;
         RawManagerResponse response = RawManager.call(connection.getCluster(), RawManagerRequest.get(ServiceType.MANAGER, url)).block();
-        if (response == null || response.httpStatus() != 200) {
-            throw new SQLException("Request did not succeed. Http status: " + (response == null ? null : response.httpStatus()));
-        }
+        if (response != null && response.httpStatus() == 404) throw BucketNotFoundException.forBucket(name);
+        else if (response == null || response.httpStatus() != 200) throw new SQLException("Request did not succeed. Http status: " + (response == null ? null : response.httpStatus()));
         JsonObject jsonObject = response.contentAs(JsonObject.class);
         Object rows = jsonObject.get("rows");
         if (!(rows instanceof JsonArray)) {

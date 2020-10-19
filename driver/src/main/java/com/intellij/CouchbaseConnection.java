@@ -151,7 +151,7 @@ public class CouchbaseConnection implements Connection {
     }
 
     @Override
-    public DatabaseMetaData getMetaData() throws SQLException {
+    public CouchbaseMetaData getMetaData() throws SQLException {
         checkClosed();
         return new CouchbaseMetaData(this, driver);
     }

@@ -135,13 +135,13 @@ class CouchbaseClientURI {
             } else {
                 envBuilder.securityConfig(securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
             }
-        }
 
-        SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
+            SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
 
-        if(keyStore.getPassword() != null) {
-            return CertificateAuthenticator.fromKeyStore(
-                    keyStore.getPath(), keyStore.getPassword(), keyStore.getType());
+            if(keyStore.getPassword() != null) {
+                return CertificateAuthenticator.fromKeyStore(
+                        keyStore.getPath(), keyStore.getPassword(), keyStore.getType());
+            }
         }
 
         if (userName == null || userName.isEmpty() || password == null) {

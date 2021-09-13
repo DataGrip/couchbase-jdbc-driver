@@ -135,15 +135,19 @@ class CouchbaseClientURI {
             } else {
                 envBuilder.securityConfig(securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
             }
+
             SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
-            return CertificateAuthenticator.fromKeyStore(
-                    keyStore.getPath(), keyStore.getPassword(), keyStore.getType());
-        } else {
-            if (userName == null || userName.isEmpty() || password == null) {
-                throw new SQLException("Username or password is not provided");
+
+            if(userName == null || userName.isEmpty()) {
+                return CertificateAuthenticator.fromKeyStore(
+                        keyStore.getPath(), keyStore.getPassword(), keyStore.getType());
             }
-            return PasswordAuthenticator.create(userName, password);
         }
+
+        if (userName == null || userName.isEmpty() || password == null) {
+            throw new SQLException("Username or password is not provided");
+        }
+        return PasswordAuthenticator.create(userName, password);
     }
 
     @Nullable

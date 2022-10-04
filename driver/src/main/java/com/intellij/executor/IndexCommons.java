@@ -1,22 +1,17 @@
 package com.intellij.executor;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.IndexesNotReadyException;
-import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.manager.GenericManagerRequest;
-import com.couchbase.client.core.msg.manager.GenericManagerResponse;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.http.CouchbaseHttpClient;
+import com.couchbase.client.java.http.HttpPath;
+import com.couchbase.client.java.http.HttpResponse;
+import com.couchbase.client.java.http.HttpTarget;
 import com.couchbase.client.java.json.JsonObject;
 import com.intellij.meta.IndexInfo;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
@@ -32,18 +27,19 @@ import static java.util.stream.Collectors.toMap;
 
 class IndexCommons {
     static void waitUntilReady(Cluster cluster, String bucketName, Duration timeout) {
-        waitInner(timeout, () -> failIfIndexesOffline(cluster.core(), bucketName));
+        waitInner(timeout, () -> failIfIndexesOffline(cluster.httpClient(), bucketName));
     }
 
     static void waitUntilOffline(Cluster cluster, String bucketName, Duration timeout) {
-        waitInner(timeout, () -> failIfIndexesPresent(cluster.core(), bucketName));
+        waitInner(timeout, () -> failIfIndexesPresent(cluster.httpClient(), bucketName));
     }
 
     private static void waitInner(Duration timeout, Runnable runnable) {
         Mono.fromRunnable(runnable)
                 .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
-                        .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(3))
-                        .timeout(timeout))
+                    .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(3))
+                    .timeout(timeout)
+                    .toReactorRetry())
                 .onErrorMap(t -> t instanceof RetryExhaustedException ? toWatchTimeoutException(t, timeout) : t)
                 .block();
     }
@@ -57,8 +53,8 @@ class IndexCommons {
         return new TimeoutException(msg.toString());
     }
 
-    private static void failIfIndexesPresent(Core core, String bucketName) {
-        Map<String, String> matchingIndexes = getMatchingIndexInfo(core, bucketName)
+    private static void failIfIndexesPresent(CouchbaseHttpClient httpClient, String bucketName) {
+        Map<String, String> matchingIndexes = getMatchingIndexInfo(httpClient, bucketName)
                 .stream()
                 .collect(toMap(IndexInfo::getQualified, IndexInfo::getStatus));
 
@@ -67,9 +63,9 @@ class IndexCommons {
         }
     }
 
-    private static void failIfIndexesOffline(Core core, String bucketName)
+    private static void failIfIndexesOffline(CouchbaseHttpClient httpClient, String bucketName)
             throws IndexesNotReadyException {
-        List<IndexInfo> matchingIndexes = getMatchingIndexInfo(core, bucketName);
+        List<IndexInfo> matchingIndexes = getMatchingIndexInfo(httpClient, bucketName);
         if (matchingIndexes.isEmpty()) {
             throw new IndexesNotReadyException(singletonMap("#primary", "notFound"));
         }
@@ -83,28 +79,28 @@ class IndexCommons {
         }
     }
 
-    static List<Object> getIndexes(Core core) throws SQLException {
+    static List<Object> getIndexes(CouchbaseHttpClient httpClient) throws SQLException {
         try {
-            GenericManagerRequest request = new GetIndexDdlRequest(core.context());
-            core.send(request);
-            GenericManagerResponse response = request.response().get();
-            if (!response.status().equals(ResponseStatus.SUCCESS)) {
+            HttpResponse response = httpClient.get(HttpTarget.manager(), HttpPath.of("/indexStatus"));
+            if (!response.success()) {
                 throw new SQLException("Failed to retrieve index information: "
-                        + "Response status=" + response.status() + " "
-                        + "Response body=" + new String(response.content(), StandardCharsets.UTF_8));
+                        + "Response status=" + response.statusCode() + " "
+                        + "Response body=" + response.contentAsString());
             }
             return JsonObject.fromJson(response.content())
                     .getArray("indexes")
                     .toList();
+        } catch (SQLException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new SQLException(ex);
         }
     }
 
-    private static List<IndexInfo> getMatchingIndexInfo(Core core, String bucketName) {
+    private static List<IndexInfo> getMatchingIndexInfo(CouchbaseHttpClient httpClient, String bucketName) {
         List<Object> list;
         try {
-            list = getIndexes(core);
+            list = getIndexes(httpClient);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -114,11 +110,5 @@ class IndexCommons {
                 .map(i -> IndexInfo.create((Map<?, ?>) i))
                 .filter(i -> bucketName.equals(i.bucket) && "#primary".equals(i.name))
                 .collect(toList());
-    }
-
-    static class GetIndexDdlRequest extends GenericManagerRequest {
-        public GetIndexDdlRequest(CoreContext ctx) {
-            super(ctx, () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/indexStatus"), false);
-        }
     }
 }

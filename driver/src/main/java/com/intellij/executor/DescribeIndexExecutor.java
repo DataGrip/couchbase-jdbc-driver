@@ -1,6 +1,6 @@
 package com.intellij.executor;
 
-import com.couchbase.client.core.Core;
+import com.couchbase.client.java.http.CouchbaseHttpClient;
 import com.intellij.CouchbaseConnection;
 import com.intellij.resultset.CouchbaseListResultSet;
 import com.intellij.resultset.CouchbaseResultSetMetaData;
@@ -39,13 +39,13 @@ class DescribeIndexExecutor implements CustomDdlExecutor {
     public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException {
         Matcher matcher = DESCRIBE_INDEX_PATTERN.matcher(sql);
         if (matcher.matches()) {
-            return new ExecutionResult(true, doRequest(connection.getCluster().core()));
+            return new ExecutionResult(true, doRequest(connection.getCluster().httpClient()));
         }
         return new ExecutionResult(false);
     }
 
-    private static ResultSet doRequest(Core core) throws SQLException {
-        List<Map<String, Object>> rows = getIndexes(core).stream()
+    private static ResultSet doRequest(CouchbaseHttpClient httpClient) throws SQLException {
+        List<Map<String, Object>> rows = getIndexes(httpClient).stream()
                 .map(item -> Collections.singletonMap(ROW_NAME, item))
                 .collect(Collectors.toList());
         CouchbaseListResultSet resultSet = new CouchbaseListResultSet(rows);

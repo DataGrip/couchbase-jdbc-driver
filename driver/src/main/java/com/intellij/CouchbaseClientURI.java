@@ -24,8 +24,8 @@ class CouchbaseClientURI {
     private static final String HTTPS_SCHEMA = "couchbases://";
 
     private static final Set<String> JDBC_KEYS = new HashSet<>(ContainerUtil.map(
-        Arrays.asList(USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE, DEFAULT_BUCKET),
-        key -> key.toLowerCase(Locale.ENGLISH)));
+            Arrays.asList(USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE, DEFAULT_BUCKET),
+            key -> key.toLowerCase(Locale.ENGLISH)));
 
     private final String connectionString;
     private final String uri;
@@ -80,8 +80,7 @@ class CouchbaseClientURI {
         Level level;
         try {
             level = Level.parse(logLevel.toUpperCase(Locale.ENGLISH));
-        }
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             e.printStackTrace();
             return;
         }
@@ -118,8 +117,8 @@ class CouchbaseClientURI {
         ClusterEnvironment environment = builder.build();
         ClusterConnection clusterConnection = new ClusterConnection(
                 Cluster.connect(connectionStringWithSchema, ClusterOptions
-                    .clusterOptions(authenticator)
-                    .environment(environment)
+                        .clusterOptions(authenticator)
+                        .environment(environment)
                 ), environment);
         clusterConnection.initConnection(defaultBucket);
         return clusterConnection;
@@ -138,7 +137,7 @@ class CouchbaseClientURI {
 
             SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
 
-            if(userName == null || userName.isEmpty()) {
+            if (userName == null || userName.isEmpty()) {
                 return CertificateAuthenticator.fromKeyStore(
                         keyStore.getPath(), keyStore.getPassword(), keyStore.getType());
             }

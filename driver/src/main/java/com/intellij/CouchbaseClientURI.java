@@ -135,9 +135,8 @@ class CouchbaseClientURI {
                 envBuilder.securityConfig(securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
             }
 
-            SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
-
             if (userName == null || userName.isEmpty()) {
+                SslKeyStoreConfig keyStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.KEY_STORE);
                 return CertificateAuthenticator.fromKeyStore(
                         keyStore.getPath(), keyStore.getPassword(), keyStore.getType());
             }

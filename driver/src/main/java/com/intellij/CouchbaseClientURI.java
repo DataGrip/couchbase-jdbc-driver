@@ -24,7 +24,7 @@ class CouchbaseClientURI {
     private static final String HTTPS_SCHEMA = "couchbases://";
 
     private static final Set<String> JDBC_KEYS = new HashSet<>(ContainerUtil.map(
-            Arrays.asList(USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE, DEFAULT_BUCKET),
+            Arrays.asList(USER, PASSWORD, ENABLE_SSL, VERIFY_SERVER_CERTIFICATE, VERIFY_HOSTNAMES, DEFAULT_BUCKET),
             key -> key.toLowerCase(Locale.ENGLISH)));
 
     private final String connectionString;
@@ -35,6 +35,7 @@ class CouchbaseClientURI {
     private final String defaultBucket;
     private final boolean sslEnabled;
     private final boolean verifyServerCert;
+    private final boolean verifyHostnames;
 
     public CouchbaseClientURI(@NotNull String uri, @Nullable Properties info) {
         this.uri = uri;
@@ -66,8 +67,8 @@ class CouchbaseClientURI {
         this.userName = getOption(info, options, USER, null);
         this.password = getOption(info, options, PASSWORD, null);
         this.sslEnabled = isTrue(getOption(info, options, ENABLE_SSL, ENABLE_SSL_DEFAULT));
-        this.verifyServerCert = isTrue(getOption(info, options, VERIFY_SERVER_CERTIFICATE,
-                VERIFY_SERVER_CERTIFICATE_DEFAULT));
+        this.verifyServerCert = isTrue(getOption(info, options, VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT));
+        this.verifyHostnames = isTrue(getOption(info, options, VERIFY_HOSTNAMES, VERIFY_HOSTNAMES_DEFAULT));
         this.hosts = serverPart;
         this.defaultBucket = nsPart != null && !nsPart.isEmpty() ? nsPart : getOption(info, options, DEFAULT_BUCKET, null);
         this.connectionString = createConnectionString(serverPart, options);
@@ -127,6 +128,7 @@ class CouchbaseClientURI {
     private Authenticator authenticate(ClusterEnvironment.Builder envBuilder) throws SQLException {
         if (sslEnabled) {
             SecurityConfig.Builder securityConfig = SecurityConfig.enableTls(true);
+            securityConfig.enableHostnameVerification(verifyHostnames);
             if (verifyServerCert) {
                 SslKeyStoreConfig trustStore = SslKeyStoreConfig.create(SslKeyStoreConfig.Type.TRUST_STORE);
                 envBuilder.securityConfig(securityConfig.trustStore(trustStore.getPath(), trustStore.getPassword(),

@@ -17,6 +17,8 @@ public class DriverPropertyInfoHelper {
     public static final String ENABLE_SSL_DEFAULT = "false";
     public static final String VERIFY_SERVER_CERTIFICATE = "verifyServerCertificate";
     public static final String VERIFY_SERVER_CERTIFICATE_DEFAULT = "true";
+    public static final String VERIFY_HOSTNAMES = "verifyHostnames";
+    public static final String VERIFY_HOSTNAMES_DEFAULT = "true";
     private static final String[] BOOL_CHOICES = new String[]{"true", "false"};
 
     public static final String USER = "user";
@@ -39,6 +41,9 @@ public class DriverPropertyInfoHelper {
         addPropInfo(propInfos, ENABLE_SSL, ENABLE_SSL_DEFAULT, "Enable ssl.", BOOL_CHOICES);
         addPropInfo(propInfos, VERIFY_SERVER_CERTIFICATE, VERIFY_SERVER_CERTIFICATE_DEFAULT,
                 "Configure a connection that uses SSL but does not verify the identity of the server.",
+                BOOL_CHOICES);
+        addPropInfo(propInfos, VERIFY_HOSTNAMES, VERIFY_HOSTNAMES_DEFAULT,
+                "Verifies the server host to ensure that it matches the name stored in the server certificate.",
                 BOOL_CHOICES);
         addPropInfo(propInfos, USER, "", "Username.", null);
         addPropInfo(propInfos, PASSWORD, "", "Password.", null);

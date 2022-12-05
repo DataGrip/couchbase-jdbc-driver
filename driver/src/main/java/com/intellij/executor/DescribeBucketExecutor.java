@@ -28,8 +28,7 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
     private static final Pattern DESCRIBE_BUCKET_PATTERN = Pattern.compile(
             "DESCRIBE\\s+(BUCKET|TABLE)\\s+(?<type>(?:(COLUMNS|SETTINGS)\\s+)?)" + BUCKET_NAME,
             CASE_INSENSITIVE);
-    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE =
-            new TypeReference<Map<String, Object>>() {};
+    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<>() {};
     private static final String ROW_NAME = "result";
 
     @Override
@@ -46,7 +45,7 @@ public class DescribeBucketExecutor implements CustomDdlExecutor {
     public ExecutionResult execute(@NotNull CouchbaseConnection connection, @NotNull String sql) throws SQLException {
         Matcher matcher = DESCRIBE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
-            String name = EscapingUtil.stripBackquotes(matcher.group("name"));
+            String name = EscapingUtil.stripBackquotes(matcher.group("bucket"));
             String type = matcher.group("type").trim();
             if (type.isEmpty() || type.equalsIgnoreCase("SETTINGS")) {
                 return describeSettings(connection.getCluster(), name);

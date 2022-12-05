@@ -19,6 +19,7 @@ import java.sql.SQLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 class GetBucketKeysExecutor implements CustomDdlExecutor {
@@ -48,7 +49,7 @@ class GetBucketKeysExecutor implements CustomDdlExecutor {
         String name = EscapingUtil.stripBackquotes(matcher.group("name"));
         if (name == null) throw new SQLException("Bucket name is not specified");
         String schema = matcher.group("schema");
-        if (SYSTEM_SCHEMA_COLON.equals(schema)) {
+        if (SYSTEM_SCHEMA.equals(schema)) {
             throw new SQLException("Cannot get keys from bucket in system schema");
         }
         String limit = matcher.group("limit");

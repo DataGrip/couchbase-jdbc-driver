@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static com.intellij.CouchbaseMetaData.SYSTEM_SCHEMA;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.DOTALL;
 
@@ -65,9 +66,9 @@ public class CreateBucketExecutor implements CustomDdlExecutor {
         Matcher matcher = CREATE_BUCKET_PATTERN.matcher(sql);
         if (matcher.matches()) {
             Cluster cluster = connection.getCluster();
-            String name = EscapingUtil.stripBackquotes(matcher.group("name"));
+            String name = EscapingUtil.stripBackquotes(matcher.group("bucket"));
             String schema = matcher.group("schema");
-            if (SYSTEM_SCHEMA_COLON.equals(schema)) {
+            if (SYSTEM_SCHEMA.equals(schema)) {
                 throw new SQLException("Cannot create bucket in system schema");
             }
             try {
